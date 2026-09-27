@@ -1,63 +1,39 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, coverageConfigDefaults } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-
   server: {
-    host: '0.0.0.0',
-    port: 10000,
-    allowedHosts: [
-      'thermacoreapp.onrender.com',
-      '.onrender.com',
-      'localhost',
-      '127.0.0.1'
-    ]
+    host: "0.0.0.0",
+    port: 5173,
+    allowedHosts: ["thermacoreapp.onrender.com"],
   },
-
   preview: {
-    host: '0.0.0.0',
-    port: 10000,
-    strictPort: true,
-    allowedHosts: [
-      'thermacoreapp.onrender.com',
-      '.onrender.com',
-      'localhost',
-      '127.0.0.1'
-    ]
+    host: "0.0.0.0",
+    port: 5173,
+    allowedHosts: ["thermacoreapp.onrender.com"],
   },
-
   test: {
     globals: true,
     environment: "jsdom",
-
     setupFiles: "./src/setupTests.js",
-
-    testTimeout: 60000,
-
-    // IMPORTANT: keep minimal — avoid destabilizing JSDOM
+    testTimeout: 10000, // <-- ONLY THIS VALUE CHANGED (was 60000)
     isolate: true,
     clearMocks: true,
     restoreMocks: true,
-
     pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-        maxForks: 1,
-      },
-    },
-
+    maxWorkers: 1,
     coverage: {
       provider: "v8",
+      include: ["src/**/*.{js,jsx}"],
+      exclude: [...coverageConfigDefaults.exclude, "src/setupTests.js"],
       reporter: ["text", "json-summary"],
     },
   },

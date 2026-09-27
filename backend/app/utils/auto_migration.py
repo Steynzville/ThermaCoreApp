@@ -5,10 +5,13 @@ where shell access is not available (e.g., Render free plan). It checks for
 missing columns and creates them via raw SQL when needed.
 """
 
+import json
 import logging
+import os
 
 from sqlalchemy import inspect, text
 
+from app.utils.data_mode import demo_enabled
 from app.utils.user_permissions_fix import fix_user_permissions
 
 logger = logging.getLogger(__name__)
@@ -30,8 +33,8 @@ def column_exists(engine, table_name, column_name):
         inspector = inspect(engine)
         columns = [col["name"] for col in inspector.get_columns(table_name)]
         return column_name in columns
-    except Exception as e:
-        logger.exception(f"Error checking if column exists: {e}")
+    except Exception:
+        logger.exception("Error checking if column exists")
         return False
 
 
@@ -111,9 +114,9 @@ def add_password_reset_columns(engine):
                     logger.info("✓ Index 'idx_users_reset_token' created successfully")
                 else:
                     logger.info("✓ Index 'idx_users_reset_token' already exists")
-        except Exception as idx_error:
+        except Exception:
             # Index creation is not critical - log warning but continue
-            logger.exception(f"Could not create/verify index: {idx_error}")
+            logger.exception("Could not create/verify index")
 
         if columns_added:
             logger.info(f"Auto-migration complete: Added columns {columns_added}")
@@ -122,8 +125,8 @@ def add_password_reset_columns(engine):
 
         return True
 
-    except Exception as e:
-        logger.exception(f"Error during auto-migration: {e}")
+    except Exception:
+        logger.exception("Error during auto-migration")
         return False
 
 
@@ -172,8 +175,8 @@ def add_permissions_column(engine):
 
         return True
 
-    except Exception as e:
-        logger.exception(f"Error adding permissions column: {e}")
+    except Exception:
+        logger.exception("Error adding permissions column")
         return False
 
 
@@ -234,8 +237,8 @@ def update_emergency_admin_permissions(engine):
 
         return True
 
-    except Exception as e:
-        logger.exception(f"Error updating emergency admin permissions: {e}")
+    except Exception:
+        logger.exception("Error updating emergency admin permissions")
         return False
 
 
@@ -427,9 +430,9 @@ def add_user_approval_columns(engine):
                         ),
                     )
                     logger.info("✓ Index 'idx_users_approved_by' created/verified")
-        except Exception as idx_error:
+        except Exception:
             # Index creation is not critical - log warning but continue
-            logger.exception(f"Could not create/verify indexes: {idx_error}")
+            logger.exception("Could not create/verify indexes")
 
         if columns_added:
             logger.info(
@@ -442,8 +445,8 @@ def add_user_approval_columns(engine):
 
         return True
 
-    except Exception as e:
-        logger.exception(f"Error during user approval columns migration: {e}")
+    except Exception:
+        logger.exception("Error during user approval columns migration")
         return False
 
 
@@ -571,10 +574,10 @@ def add_user_profile_fields(engine):
                         logger.info(f"✓ Index '{index_name}' created successfully")
                     else:
                         logger.info(f"✓ Index '{index_name}' already exists")
-            except Exception as idx_error:
+            except Exception:
                 # Index creation is not critical - log warning but continue
                 logger.exception(
-                    f"Could not create/verify index '{index_name}': {idx_error}",
+                    "Could not create/verify index '{index_name}': {idx_error}",
                 )
 
         if columns_added:
@@ -588,8 +591,8 @@ def add_user_profile_fields(engine):
 
         return True
 
-    except Exception as e:
-        logger.exception(f"Error adding user profile fields: {e}")
+    except Exception:
+        logger.exception("Error adding user profile fields")
         return False
 
 
@@ -607,8 +610,8 @@ def table_exists(engine, table_name):
     try:
         inspector = inspect(engine)
         return table_name in inspector.get_table_names()
-    except Exception as e:
-        logger.exception(f"Error checking if table exists: {e}")
+    except Exception:
+        logger.exception("Error checking if table exists")
         return False
 
 
@@ -727,8 +730,8 @@ def add_tenants_table(engine):
         logger.info("✓ Tenants table created successfully")
         return True
 
-    except Exception as e:
-        logger.exception(f"Error creating tenants table: {e}")
+    except Exception:
+        logger.exception("Error creating tenants table")
         return False
 
 
@@ -796,8 +799,8 @@ def add_tenant_id_to_users(engine):
         logger.info("✓ Column 'tenant_id' added to users table successfully")
         return True
 
-    except Exception as e:
-        logger.exception(f"Error adding tenant_id to users table: {e}")
+    except Exception:
+        logger.exception("Error adding tenant_id to users table")
         return False
 
 
@@ -865,8 +868,302 @@ def add_tenant_id_to_units(engine):
         logger.info("✓ Column 'tenant_id' added to units table successfully")
         return True
 
-    except Exception as e:
-        logger.exception(f"Error adding tenant_id to units table: {e}")
+    except Exception:
+        logger.exception("Error adding tenant_id to units table")
+        return False
+
+
+def create_clients_table(engine):
+    """Create clients table if it doesn't exist.
+
+    Args:
+        engine: SQLAlchemy engine instance
+
+    Returns:
+        bool: True if table was created or already exists, False on error
+    """
+    try:
+        inspector = inspect(engine)
+        if "clients" in inspector.get_table_names():
+            logger.info("✓ Table 'clients' already exists")
+            return True
+
+        logger.info("Creating clients table...")
+        with engine.begin() as conn:
+            if engine.dialect.name == "postgresql":
+                conn.execute(
+                    text(
+                        """
+                    CREATE TABLE IF NOT EXISTS clients (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(255) UNIQUE NOT NULL,
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """,
+                    ),
+                )
+            elif engine.dialect.name == "sqlite":
+                conn.execute(
+                    text(
+                        """
+                    CREATE TABLE IF NOT EXISTS clients (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name VARCHAR(255) UNIQUE NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """,
+                    ),
+                )
+            else:
+                logger.error(f"Unsupported database dialect: {engine.dialect.name}")
+                return False
+
+        logger.info("✓ Table 'clients' created successfully")
+        return True
+    except Exception:
+        logger.exception("Error creating clients table")
+        return False
+
+
+def add_client_id_to_tenants(engine):
+    """Add client_id column to tenants table if it doesn't exist.
+
+    Args:
+        engine: SQLAlchemy engine instance
+
+    Returns:
+        bool: True if column was added or already exists, False on error
+    """
+    try:
+        table_name = "tenants"
+        if not column_exists(engine, table_name, "client_id"):
+            logger.info("Adding client_id column to tenants table...")
+            with engine.begin() as conn:
+                if engine.dialect.name == "postgresql":
+                    conn.execute(
+                        text(
+                            "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id)",
+                        ),
+                    )
+                    conn.execute(
+                        text(
+                            "CREATE INDEX IF NOT EXISTS idx_tenants_client_id ON tenants(client_id)",
+                        ),
+                    )
+                elif engine.dialect.name == "sqlite":
+                    conn.execute(
+                        text(
+                            "ALTER TABLE tenants ADD COLUMN client_id INTEGER REFERENCES clients(id)",
+                        ),
+                    )
+                    conn.execute(
+                        text(
+                            "CREATE INDEX IF NOT EXISTS idx_tenants_client_id ON tenants(client_id)",
+                        ),
+                    )
+            logger.info("✓ Column 'client_id' added to tenants table")
+        else:
+            logger.info("✓ Column 'client_id' already exists in tenants table")
+        return True
+    except Exception:
+        logger.exception("Error adding client_id to tenants table")
+        return False
+
+
+def add_client_id_to_users(engine):
+    """Add client_id column to users table if it doesn't exist.
+
+    Args:
+        engine: SQLAlchemy engine instance
+
+    Returns:
+        bool: True if column was added or already exists, False on error
+    """
+    try:
+        table_name = "users"
+        if not column_exists(engine, table_name, "client_id"):
+            logger.info("Adding client_id column to users table...")
+            with engine.begin() as conn:
+                if engine.dialect.name == "postgresql":
+                    conn.execute(
+                        text(
+                            "ALTER TABLE users ADD COLUMN IF NOT EXISTS client_id INTEGER REFERENCES clients(id)",
+                        ),
+                    )
+                    conn.execute(
+                        text(
+                            "CREATE INDEX IF NOT EXISTS idx_users_client_id ON users(client_id)",
+                        ),
+                    )
+                elif engine.dialect.name == "sqlite":
+                    conn.execute(
+                        text(
+                            "ALTER TABLE users ADD COLUMN client_id INTEGER REFERENCES clients(id)",
+                        ),
+                    )
+                    conn.execute(
+                        text(
+                            "CREATE INDEX IF NOT EXISTS idx_users_client_id ON users(client_id)",
+                        ),
+                    )
+            logger.info("✓ Column 'client_id' added to users table")
+        else:
+            logger.info("✓ Column 'client_id' already exists in users table")
+        return True
+    except Exception:
+        logger.exception("Error adding client_id to users table")
+        return False
+
+
+def seed_client_admin_data(engine):
+    """Seed initial Client Admin data (ACME Energy client, tenants, and clientadmin user).
+
+    Args:
+        engine: SQLAlchemy engine instance
+
+    Returns:
+        bool: True if seeding was successful, False on error
+    """
+    if not demo_enabled():
+        return True
+    demo_password = os.getenv("DEMO_CLIENT_ADMIN_PASSWORD")
+    if not demo_password or len(demo_password) < 12:
+        logger.error(
+            "Demo seeding requires DEMO_CLIENT_ADMIN_PASSWORD of at least 12 characters",
+        )
+        return False
+    try:
+        with engine.begin() as conn:
+            # 1. Create client_admin role if not exists
+            role_res = conn.execute(
+                text("SELECT id FROM roles WHERE name = 'client_admin'"),
+            ).fetchone()
+            if not role_res:
+                conn.execute(
+                    text(
+                        "INSERT INTO roles (name, description) VALUES ('client_admin', 'Client Admin - Full administration for client tenants and users')",
+                    ),
+                )
+                role_res = conn.execute(
+                    text("SELECT id FROM roles WHERE name = 'client_admin'"),
+                ).fetchone()
+            client_admin_role_id = role_res[0] if role_res else None
+
+            # 2. Create Client: ACME Energy
+            client_res = conn.execute(
+                text("SELECT id FROM clients WHERE name = 'ACME Energy'"),
+            ).fetchone()
+            if not client_res:
+                conn.execute(
+                    text("INSERT INTO clients (name) VALUES ('ACME Energy')"),
+                )
+                client_res = conn.execute(
+                    text("SELECT id FROM clients WHERE name = 'ACME Energy'"),
+                ).fetchone()
+            client_id = client_res[0] if client_res else 1
+
+            # 3. Create Tenants: ACME Sydney, ACME Melbourne, ACME Brisbane with client_id
+            acme_tenants = [
+                ("ACME Sydney", "acme-sydney", "ACME Energy Sydney Facility"),
+                ("ACME Melbourne", "acme-melbourne", "ACME Energy Melbourne Facility"),
+                ("ACME Brisbane", "acme-brisbane", "ACME Energy Brisbane Facility"),
+            ]
+            first_tenant_id = None
+            for name, slug, desc in acme_tenants:
+                t_res = conn.execute(
+                    text("SELECT id FROM tenants WHERE slug = :slug"),
+                    {"slug": slug},
+                ).fetchone()
+                if not t_res:
+                    conn.execute(
+                        text(
+                            """
+                            INSERT INTO tenants (name, slug, description, is_active, client_id)
+                            VALUES (:name, :slug, :desc, true, :client_id)
+                            """,
+                        ),
+                        {
+                            "name": name,
+                            "slug": slug,
+                            "desc": desc,
+                            "client_id": client_id,
+                        },
+                    )
+                    t_res = conn.execute(
+                        text("SELECT id FROM tenants WHERE slug = :slug"),
+                        {"slug": slug},
+                    ).fetchone()
+                else:
+                    conn.execute(
+                        text(
+                            "UPDATE tenants SET client_id = :client_id WHERE id = :id",
+                        ),
+                        {"client_id": client_id, "id": t_res[0]},
+                    )
+                if not first_tenant_id and t_res:
+                    first_tenant_id = t_res[0]
+
+            # 4. Create the explicitly enabled demo client administrator.
+            user_res = conn.execute(
+                text(
+                    "SELECT id FROM users WHERE email = 'clientadmin@thermacore.com' OR username = 'client_admin' OR username = 'clientadmin'",
+                ),
+            ).fetchone()
+            if not user_res:
+                from werkzeug.security import generate_password_hash
+
+                password_hash = generate_password_hash(
+                    demo_password,
+                    method="pbkdf2:sha256",
+                )
+                client_admin_permissions = json.dumps(
+                    [
+                        "read_units",
+                        "write_units",
+                        "read_users",
+                        "write_users",
+                        "admin_panel",
+                        "remote_control",
+                    ],
+                )
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO users (
+                            username, email, password_hash, first_name, last_name,
+                            role_id, client_id, tenant_id, is_active, registration_status, permissions
+                        ) VALUES (
+                            'clientadmin', 'clientadmin@thermacore.com', :password_hash, 'Client', 'Admin',
+                            :role_id, :client_id, :tenant_id, true, 'approved', :permissions
+                        )
+                        """,
+                    ),
+                    {
+                        "password_hash": password_hash,
+                        "role_id": client_admin_role_id,
+                        "client_id": client_id,
+                        "tenant_id": first_tenant_id,
+                        "permissions": client_admin_permissions,
+                    },
+                )
+            else:
+                conn.execute(
+                    text(
+                        "UPDATE users SET client_id = :client_id, role_id = :role_id WHERE id = :id",
+                    ),
+                    {
+                        "client_id": client_id,
+                        "role_id": client_admin_role_id,
+                        "id": user_res[0],
+                    },
+                )
+
+        logger.info("✓ Client admin seed data created successfully")
+        return True
+    except Exception:
+        logger.exception("Error seeding client admin data")
         return False
 
 
@@ -893,13 +1190,33 @@ def add_multi_tenancy_support(engine):
         # Step 1: Create tenants table
         tenants_success = add_tenants_table(engine)
 
-        # Step 2: Add tenant_id to users table
+        # Step 2: Create clients table
+        clients_success = create_clients_table(engine)
+
+        # Step 3: Add client_id to tenants table
+        client_tenants_success = add_client_id_to_tenants(engine)
+
+        # Step 4: Add tenant_id to users table
         users_success = add_tenant_id_to_users(engine)
 
-        # Step 3: Add tenant_id to units table
+        # Step 5: Add client_id to users table
+        client_users_success = add_client_id_to_users(engine)
+
+        # Step 6: Add tenant_id to units table
         units_success = add_tenant_id_to_units(engine)
 
-        success = tenants_success and users_success and units_success
+        # Step 7: Seed client admin data
+        seed_success = seed_client_admin_data(engine)
+
+        success = (
+            tenants_success
+            and clients_success
+            and client_tenants_success
+            and users_success
+            and client_users_success
+            and units_success
+            and seed_success
+        )
 
         if success:
             logger.info("✓ Multi-tenancy migration completed successfully")
@@ -910,8 +1227,8 @@ def add_multi_tenancy_support(engine):
 
         return success
 
-    except Exception as e:
-        logger.exception(f"Error during multi-tenancy migration: {e}")
+    except Exception:
+        logger.exception("Error during multi-tenancy migration")
         return False
 
 
@@ -938,6 +1255,57 @@ def run_auto_migrations(app):
         # Get engine within app context
         with app.app_context():
             engine = db.engine
+
+            # Additive, idempotent migration; never reassign tenant ownership.
+            from app.models import (
+                AccountEntitlement,
+                AccountProfile,
+                ExternalIdentity,
+                MaintenanceSchedule,
+                OAuthTransaction,
+                PasskeyChallenge,
+                PasskeyCredential,
+                ReportSchedule,
+                SaleRecord,
+                UnitCommand,
+                UnitCondition,
+            )
+
+            AccountProfile.__table__.create(bind=engine, checkfirst=True)
+            PasskeyCredential.__table__.create(bind=engine, checkfirst=True)
+            PasskeyChallenge.__table__.create(bind=engine, checkfirst=True)
+            ExternalIdentity.__table__.create(bind=engine, checkfirst=True)
+            OAuthTransaction.__table__.create(bind=engine, checkfirst=True)
+            UnitCondition.__table__.create(bind=engine, checkfirst=True)
+            AccountEntitlement.__table__.create(bind=engine, checkfirst=True)
+            UnitCommand.__table__.create(bind=engine, checkfirst=True)
+            MaintenanceSchedule.__table__.create(bind=engine, checkfirst=True)
+            ReportSchedule.__table__.create(bind=engine, checkfirst=True)
+            SaleRecord.__table__.create(bind=engine, checkfirst=True)
+            for column in (
+                "supports_heat",
+                "supports_chill",
+                "supports_water",
+                "useful_heat_kw",
+                "useful_chill_kw",
+                "water_rate_lph",
+                "differential_pressure_bar",
+                "temp_out_hot",
+                "battery_voltage",
+                "flow_rate_inlet",
+                "flow_rate_out_chill",
+                "flow_rate_out_hot",
+            ):
+                if not column_exists(engine, "units", column):
+                    definition = (
+                        "BOOLEAN DEFAULT FALSE"
+                        if column.startswith("supports_")
+                        else "FLOAT"
+                    )
+                    with engine.begin() as connection:
+                        connection.execute(
+                            text(f"ALTER TABLE units ADD COLUMN {column} {definition}"),
+                        )
 
             # Run user profile fields migration (must run before other migrations)
             user_profile_success = add_user_profile_fields(engine)
@@ -972,7 +1340,7 @@ def run_auto_migrations(app):
 
         return success
 
-    except Exception as e:
-        logger.exception(f"Error running auto-migrations: {e}")
+    except Exception:
+        logger.exception("Error running auto-migrations")
         # Don't crash the app if migrations fail - just log the error
         return False

@@ -2,6 +2,7 @@
 import { toast } from "sonner";
 
 import { getAuthTokenWithSource } from "./authToken";
+import { apiUrl } from "../config/runtime";
 
 // Pre-convert network error patterns to lowercase for performance optimization
 // This avoids repeated toLowerCase() calls during error checking
@@ -29,6 +30,7 @@ export const apiFetch = async (
   showToastOnError = true,
   redirectOn401 = true,
 ) => {
+  url = apiUrl(url);
   // Extract custom options
   const {
     showToastOnError: optionsToast = showToastOnError,
@@ -93,6 +95,7 @@ export const apiFetch = async (
         // Clear stored tokens - use the actual token key being read
         localStorage.removeItem("thermacore_token");
         localStorage.removeItem("refreshToken");
+        sessionStorage.removeItem("thermacore_token");
 
         // Enhanced redirect handling - check for login page and avoid redirect loops
         if (

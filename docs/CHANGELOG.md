@@ -5,6 +5,99 @@ This document tracks all changes, security updates, and performance optimization
 
 ---
 
+## [v2.9.0] - August 2026
+
+### 🎨 Metric Label Alignment & UI Consistency
+* **Domain Metric Standardization**: Standardized all UI metric labels across Unit Control (`UnitControl.jsx`), Unit Overview (`UnitOverviewTab.jsx`), Unit Vitals (`UnitVitals.jsx`), and Remote Control (`RemoteControl.jsx`):
+  * "Water Level" → **"AWG Water Level"**
+  * "Temp Out" → **"Temp Out - Chill"**
+  * "Pressure" / "Differential Pressure" → **"Differential Pressure"**
+  * "Flow Rate Inlet" → **"Flow Rate Out - Chill"**
+  * "Flow Rate Outlet" → **"Flow Rate Out - Hot"**
+* **Alarm Threshold Visualizers**: Added explicit threshold handling and UI indicators for:
+  * Critical **NH3 Leak Detected** alarm when Differential Pressure < 4 bar
+  * **High Differential Pressure Auto-Shutdown** alarm when Differential Pressure > 6 bar
+  * **Low Battery Voltage Alert** when Battery Voltage < 23V
+  * **High Battery Voltage Alert** when Battery Voltage > 27V
+* **Remote Control Setpoints & Operation Modes**:
+  * Dual setpoint slider controls for Power Production Setpoint (0–100%) and AWG Water Production Setpoint (0–100%)
+  * Quick-select operation mode presets: Balanced (50/50), Power Priority (90/20), AWG Water Priority (30/90), and Custom
+
+### 🧪 Testing
+* Updated `UnitControl.test.jsx`, `UnitOverviewTab.test.jsx`, `UnitVitals.test.jsx`, and `RemoteControl.test.jsx` with full test assertions for the updated metric labels, differential pressure alarm thresholds, battery voltage alerts, setpoint sliders, and operation modes.
+
+### 📝 Documentation
+* Updated `README.md`, `OPERATOR_MANUAL.md`, `API_REFERENCE.md`, and `FAQ.md` to document the standardized metric labels, safety alarm rules, setpoint controls, and operation modes.
+
+---
+
+## [v2.8.1] - July 2026
+
+### 🐛 Bug Fixes
+* **Client Admin Tenant Filtering**: Fixed critical issue where Client Admin users saw all tenants instead of only those belonging to their client organization.
+  * Enhanced `TenantContext` filtering logic to properly filter by `client_id` in both the `try` and `catch` blocks.
+  * Added fallback filtering for mock tenants when API is unavailable, ensuring Client Admin sees only ACME tenants even during network issues.
+  * Updated `TenantSwitcher` to use `canSwitchTenants` instead of `isAdmin` for role checking, allowing both `admin` and `client_admin` to access the switcher.
+  * Fixed `Dashboard` component to use `canSwitchTenants` for redirect logic and tenant switcher rendering.
+
+### 📝 Documentation
+* Updated API Reference (`API_REFERENCE.md`) with tenant filtering behavior documentation.
+* Added Client Admin tenant filtering troubleshooting section to `DEPLOYMENT_GUIDE.md`.
+* Added comprehensive troubleshooting section for Client Admin filtering issues in `TROUBLESHOOTING.md`.
+* Clarified Client Admin tenant filtering behavior in `OPERATOR_MANUAL.md`.
+* Documented filtering implementation in `DEVELOPER_ONBOARDING.md`.
+
+### 🔧 Backend Fixes
+* Added `fix_client_admin_migration.py` script to repair Client Admin user records.
+* Enhanced `seed_client_admin_data()` function to update existing Client Admin users with correct `client_id`.
+* Added validation queries for Client Admin tenant filtering diagnostics.
+
+### 🧪 Testing
+* Updated `TenantContext.test.jsx` to cover Client Admin filtering scenarios.
+* Added tests for Client Admin tenant filtering on API success and failure paths.
+* Added tests for Client Admin with no `client_id` and with non-existent `client_id`.
+
+---
+
+## [v2.8.0] - July 2026
+
+### 🚀 Client Admin Role & Multi-Tenant Scoping (Backend & Database)
+* **Client Admin Role (`CLIENT_ADMIN`)**: Added `CLIENT_ADMIN = "client_admin"` to `RoleEnum` with administrative scope across all tenants under a specific client organization.
+* **Client Model & Multi-Tenant Schema Expansion**:
+  * Created `Client` model (`backend/app/models/client.py`) with `clients` table (`id`, `name`, `created_at`, `updated_at`).
+  * Updated `Tenant` and `User` models in `backend/app/models/__init__.py` with foreign key `client_id` pointing to `clients.id`.
+* **Database Migration & Seeding (`auto_migration.py`)**:
+  * Added auto-migration functions (`create_clients_table`, `add_client_id_to_tenants`, `add_client_id_to_users`).
+  * Seeded initial client "ACME Energy", three facilities ("ACME Sydney", "ACME Melbourne", "ACME Brisbane"), and default Client Admin user (`clientadmin@thermacore.com` / `clientadmin123`).
+* **Middleware & API Scoping**:
+  * Updated `tenant.py` middleware to scope queries by `client_id` for Client Admin users while allowing System Admins full cross-tenant visibility.
+  * Updated `/auth/login` response payload and `build_login_response` to include `client_id` and `is_approved`.
+  * Updated `/tenants` routes to enforce client-based tenant filtering and validation.
+
+---
+
+## [v2.7.0] - July 2026
+
+### 🚀 New Features & Enhancements
+* **Admin Tenant Switcher Integration**: Implemented a comprehensive multi-tenant management interface for administrative users.
+  * **Admin Landing Page**: Added a dedicated tenant selection portal for administrator accounts, facilitating immediate redirection upon authentication. Administrators now land on `/admin` where they must select a tenant before accessing any tenant-specific data.
+  * **Global Tenant Switcher Header**: Integrated a live dropdown tenant selector directly inside the main Dashboard header, allowing seamless context-switching for administrator roles without requiring a full logout/login cycle.
+  * **Enhanced Sidebar Navigation**: Upgraded navigation rails with a Return-to-Tenant-Switcher link (labeled "Tenant Switcher" with Shield icon) and a separate User Management view for administrator accounts.
+  * **Role-Based Access Control**: Admin-only routes are now protected via `ProtectedRoute` with `roles: ["admin"]` configured in `routes.js`, ensuring consistent role normalization across the application.
+
+### 🛡️ Security & Hardening Updates
+* **Restricted Multi-Protocol Manager to System Admin Only**: Closed a security vulnerability where Viewers and Operators could view and modify the Multi-Protocol Manager.
+  * Added component route guard in `MultiProtocolManager.jsx` automatically redirecting non-admin users to `/dashboard`.
+  * Updated `canViewProtocols` permission in `permissions.js` to strictly return `true` only for `admin` backendRole.
+  * Updated `SideNavigation.jsx` to hide the Protocol Manager link from non-admin users.
+  * Updated permission and protocol manager test suites (`permissions.test.js` and `MultiProtocolManager.test.jsx`).
+
+### 📊 Testing & Quality Assurance
+* **Test Coverage Maintenance**: Updated test suites for `App`, `Dashboard`, `SideNavigation`, `AdminLanding`, and `routes` to cover the new tenant switching functionality.
+* **Route Configuration Validation**: Added structural tests ensuring `isAdminRoute` documentation matches actual `roles` configuration for all admin-only routes.
+
+---
+
 ## [v2.6.0] - June 2026
 
 ### 📊 Testing & Quality Assurance Milestones

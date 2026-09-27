@@ -1,8 +1,21 @@
-// src/tests/App.test.jsx
-
-import { cleanup, render, screen, waitFor, act, fireEvent } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  beforeAll,
+} from "vitest";
 import React from "react";
 import { MemoryRouter, Link } from "react-router-dom";
 
@@ -14,7 +27,7 @@ vi.useRealTimers();
 // Helper to flush React.startTransition navigation updates
 const flushNavigation = async () => {
   await act(async () => {
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 };
 
@@ -26,7 +39,9 @@ const { getInitialEntries, setInitialRoute } = vi.hoisted(() => {
   let entries = ["/"];
   return {
     getInitialEntries: () => entries,
-    setInitialRoute: (path) => { entries = [path]; },
+    setInitialRoute: (path) => {
+      entries = [path];
+    },
   };
 });
 
@@ -64,6 +79,7 @@ const { authState } = vi.hoisted(() => {
 
 const { mockUseSettings } = vi.hoisted(() => ({
   mockUseSettings: vi.fn(() => ({
+    updateSettings: vi.fn(),
     settings: { soundEnabled: true, volume: 0.5 },
   })),
 }));
@@ -71,32 +87,55 @@ const { mockUseSettings } = vi.hoisted(() => ({
 vi.mock("../context/AuthContext", () => ({
   default: authState,
   useAuth: () => authState,
-  AuthProvider: ({ children }) => <div data-testid="auth-provider">{children}</div>,
+  AuthProvider: ({ children }) => (
+    <div data-testid="auth-provider">{children}</div>
+  ),
 }));
 
 vi.mock("../context/SettingsContext", () => ({
   useSettings: mockUseSettings,
-  SettingsProvider: ({ children }) => <div data-testid="settings-provider">{children}</div>,
+  SettingsProvider: ({ children }) => (
+    <div data-testid="settings-provider">{children}</div>
+  ),
 }));
 
 vi.mock("../context/ThemeContext", () => ({
-  ThemeProvider: ({ children }) => <div data-testid="theme-provider">{children}</div>,
+  ThemeProvider: ({ children }) => (
+    <div data-testid="theme-provider">{children}</div>
+  ),
   useTheme: vi.fn(() => ({ theme: "light", toggleTheme: vi.fn() })),
 }));
 
 vi.mock("../context/SidebarContext", () => ({
-  SidebarProvider: ({ children }) => <div data-testid="sidebar-provider">{children}</div>,
+  SidebarProvider: ({ children }) => (
+    <div data-testid="sidebar-provider">{children}</div>
+  ),
   useSidebar: vi.fn(() => ({ isOpen: true, toggleSidebar: vi.fn() })),
 }));
 
 vi.mock("../context/TenantContext", () => ({
-  TenantProvider: ({ children }) => <div data-testid="tenant-provider">{children}</div>,
-  useTenant: vi.fn(() => ({ tenant: null, setTenant: vi.fn() })),
+  TenantProvider: ({ children }) => (
+    <div data-testid="tenant-provider">{children}</div>
+  ),
+  useTenant: vi.fn(() => ({
+    currentTenant: null,
+    availableTenants: [],
+    switchTenant: vi.fn(),
+  })),
 }));
 
 vi.mock("../context/UnitContext", () => ({
-  UnitProvider: ({ children }) => <div data-testid="unit-provider">{children}</div>,
-  useUnits: vi.fn(() => ({ units: [], loading: false })),
+  UnitProvider: ({ children }) => (
+    <div data-testid="unit-provider">{children}</div>
+  ),
+  useUnits: vi.fn(() => ({
+    units: [],
+    records: [],
+    events: [],
+    alerts: [],
+    scopeKey: "test",
+    loading: false,
+  })),
 }));
 
 // Mock all child components
@@ -164,7 +203,7 @@ vi.mock("../components/ThemeToggle", () => ({
 
 vi.mock("../components/ui/spinner", () => ({
   Spinner: ({ className, size, ...props }) => (
-    <div data-testid="spinner" aria-label="Loading" {...props}>
+    <div role="status" data-testid="spinner" aria-label="Loading" {...props}>
       Loading...
     </div>
   ),
@@ -172,14 +211,16 @@ vi.mock("../components/ui/spinner", () => ({
 
 vi.mock("../components/common/Spinner", () => ({
   default: ({ className, size, ...props }) => (
-    <div data-testid="spinner" aria-label="Loading" {...props}>
+    <div role="status" data-testid="spinner" aria-label="Loading" {...props}>
       Loading...
     </div>
   ),
 }));
 
 vi.mock("../components/ForgotPassword", () => ({
-  default: () => <div data-testid="forgot-password-page">Password Reset Request</div>,
+  default: () => (
+    <div data-testid="forgot-password-page">Password Reset Request</div>
+  ),
 }));
 
 vi.mock("../components/PasswordResetRequest", () => ({
@@ -188,14 +229,32 @@ vi.mock("../components/PasswordResetRequest", () => ({
 
 vi.mock("../components/ProtectedRoute", () => ({
   default: ({ component: Component, componentMap, roles }) => {
+    // Use the role from authState to determine which component to render
+    const userRole = authState.user?.role || "user";
+
     if (componentMap) {
-      const AdminComponent = componentMap.admin;
+      const hasAccess =
+        !roles || roles.length === 0 || roles.includes(userRole);
+
+      if (!hasAccess) {
+        return <div data-testid="protected-route">Access Denied</div>;
+      }
+
+      const RoleComponent =
+        userRole === "admin" ? componentMap.admin : componentMap.user;
       return (
         <div data-testid="protected-route">
-          {AdminComponent ? <AdminComponent /> : <div>Protected Content</div>}
+          {RoleComponent ? <RoleComponent /> : <div>Protected Content</div>}
         </div>
       );
     }
+
+    const hasAccess = !roles || roles.length === 0 || roles.includes(userRole);
+
+    if (!hasAccess) {
+      return <div data-testid="protected-route">Access Denied</div>;
+    }
+
     return (
       <div data-testid="protected-route">
         {Component ? <Component /> : <div>Protected Content</div>}
@@ -230,6 +289,12 @@ vi.mock("../config/routes", () => ({
       isProtected: false,
     },
     {
+      path: "/admin",
+      component: () => <div data-testid="admin-page">Admin</div>,
+      isProtected: true,
+      roles: ["admin"],
+    },
+    {
       path: "/units",
       component: () => <div data-testid="unit-fallback">Unit Fallback</div>,
       isProtected: true,
@@ -238,10 +303,18 @@ vi.mock("../config/routes", () => ({
     },
     {
       path: "/unit-details-role-based",
-      component: () => <div data-testid="unit-details-fallback">Unit Details Fallback</div>,
+      component: () => (
+        <div data-testid="unit-details-fallback">Unit Details Fallback</div>
+      ),
       isProtected: true,
       roles: ["admin", "user"],
       specialHandling: "unit-details-role-based",
+    },
+    {
+      path: "/open-route",
+      component: () => <div data-testid="open-route-page">Open Route</div>,
+      isProtected: true,
+      roles: [], // Open to all authenticated users
     },
   ],
 }));
@@ -268,9 +341,15 @@ class MockAudioContext {
     this.state = "suspended";
     this.destination = {};
   }
-  resume() { return Promise.resolve(); }
-  suspend() { return Promise.resolve(); }
-  close() { return Promise.resolve(); }
+  resume() {
+    return Promise.resolve();
+  }
+  suspend() {
+    return Promise.resolve();
+  }
+  close() {
+    return Promise.resolve();
+  }
   decodeAudioData() {
     return Promise.resolve({
       duration: 1,
@@ -296,7 +375,10 @@ class MockAudioContext {
   }
 }
 
-const reloadMock = vi.fn();
+const { reloadMock } = vi.hoisted(() => ({ reloadMock: vi.fn() }));
+vi.mock("../utils/reloadApplication", () => ({
+  reloadApplication: reloadMock,
+}));
 
 beforeAll(() => {
   vi.useRealTimers();
@@ -313,12 +395,6 @@ beforeAll(() => {
     value: MockAudioContext,
   });
 
-  Object.defineProperty(window.location, "reload", {
-    configurable: true,
-    writable: true,
-    value: reloadMock,
-  });
-
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     configurable: true,
@@ -333,11 +409,13 @@ beforeAll(() => {
     }),
   });
 
-  window.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  }));
+  window.ResizeObserver = vi.fn().mockImplementation(function () {
+    return {
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    };
+  });
 });
 
 beforeEach(() => {
@@ -345,6 +423,7 @@ beforeEach(() => {
   vi.useRealTimers();
 
   mockUseSettings.mockReturnValue({
+    updateSettings: vi.fn(),
     settings: { soundEnabled: true, volume: 0.5 },
   });
 
@@ -379,7 +458,9 @@ const setAuth = (overrides = {}) => {
 // ============================================================
 
 const captureWindowListener = (addEventListenerSpy, eventType) => {
-  const call = addEventListenerSpy.mock.calls.find(([type]) => type === eventType);
+  const call = addEventListenerSpy.mock.calls.find(
+    ([type]) => type === eventType,
+  );
   return call ? call[1] : undefined;
 };
 
@@ -467,12 +548,15 @@ describe("App", () => {
     const form = screen.getByTestId("login-button").closest("form");
     fireEvent.submit(form);
 
-    await waitFor(() => {
-      expect(mockLogin).toHaveBeenCalledWith({
-        username: "admin@thermacore.com",
-        password: "emergency_admin_789",
-      });
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(mockLogin).toHaveBeenCalledWith({
+          username: "admin@thermacore.com",
+          password: "emergency_admin_789",
+        });
+      },
+      { timeout: 3000 },
+    );
   });
 
   it("shows an error message when login rejects", async () => {
@@ -494,9 +578,12 @@ describe("App", () => {
     const form = screen.getByTestId("login-button").closest("form");
     fireEvent.submit(form);
 
-    await waitFor(() => {
-      expect(screen.getByTestId("login-error")).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("login-error")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     const errorElement = screen.getByTestId("login-error");
     expect(errorElement).toHaveTextContent(errorMessage);
@@ -512,9 +599,12 @@ describe("App", () => {
     await user.click(screen.getByTestId("forgot-password-link"));
     await flushNavigation();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("forgot-password-page")).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("forgot-password-page")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
   });
 
   it("renders the forgot password route directly", async () => {
@@ -555,15 +645,57 @@ describe("App", () => {
   });
 
   it("renders a protected route when authenticated", async () => {
-    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+    setAuth({
+      user: { id: 1, name: "Test User", role: "user" },
+      isAuthenticated: true,
+    });
     setInitialRoute("/dashboard");
     render(<App />);
     await flushNavigation();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
-      expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+        expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it("renders admin route when authenticated as admin", async () => {
+    setAuth({
+      user: { id: 1, name: "Admin User", role: "admin" },
+      isAuthenticated: true,
+    });
+    setInitialRoute("/admin");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+        expect(screen.getByTestId("admin-page")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it("renders an open route (roles: []) for any authenticated user", async () => {
+    setAuth({
+      user: { id: 1, name: "Regular User", role: "user" },
+      isAuthenticated: true,
+    });
+    setInitialRoute("/open-route");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+        expect(screen.getByTestId("open-route-page")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
   });
 
   it("redirects to login when visiting a protected route unauthenticated", async () => {
@@ -591,28 +723,95 @@ describe("App", () => {
 
   // ============ SPECIAL HANDLING / ROLE-BASED TESTS ============
 
-  it("renders the role-based component map for a special-handling route", async () => {
-    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+  it("renders the admin role-based component for a special-handling route when user is admin", async () => {
+    setAuth({
+      user: { id: 1, name: "Admin User", role: "admin" },
+      isAuthenticated: true,
+    });
     setInitialRoute("/units");
     render(<App />);
     await flushNavigation();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
-      expect(screen.getByTestId("unit-control")).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+        expect(screen.getByTestId("unit-details")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it("renders the user role-based component for a special-handling route when user is regular user", async () => {
+    setAuth({
+      user: { id: 1, name: "Regular User", role: "user" },
+      isAuthenticated: true,
+    });
+    setInitialRoute("/units");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+        expect(screen.getByTestId("unit-details")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
   });
 
   it("renders the role-based component map for unit-details special-handling", async () => {
-    setAuth({ user: { id: 1, name: "Test User" }, isAuthenticated: true });
+    setAuth({
+      user: { id: 1, name: "Admin User", role: "admin" },
+      isAuthenticated: true,
+    });
     setInitialRoute("/unit-details-role-based");
     render(<App />);
     await flushNavigation();
 
-    await waitFor(() => {
-      expect(screen.getByTestId("protected-route")).toBeInTheDocument();
-      expect(screen.getByTestId("unit-details")).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+        expect(screen.getByTestId("unit-details")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  it("renders user unit details for regular user on unit-details route", async () => {
+    setAuth({
+      user: { id: 1, name: "Regular User", role: "user" },
+      isAuthenticated: true,
+    });
+    setInitialRoute("/unit-details-role-based");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+        expect(screen.getByTestId("unit-details")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
+  });
+
+  // ProtectedRoute enforces role check directly now that AdminRoute is removed
+  it("shows access denied when user role doesn't match route roles", async () => {
+    setAuth({
+      user: { id: 1, name: "Regular User", role: "user" },
+      isAuthenticated: true,
+    });
+    setInitialRoute("/admin");
+    render(<App />);
+    await flushNavigation();
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("protected-route")).toBeInTheDocument();
+        expect(screen.getByText("Access Denied")).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
   });
 
   // ============ LOGIN SOUND TESTS ============
@@ -629,16 +828,15 @@ describe("App", () => {
     await flushNavigation();
 
     await waitFor(() => {
-      expect(playSound).toHaveBeenCalledWith(
-        "login-sound.mp3",
-        true,
-        0.5
-      );
+      expect(playSound).toHaveBeenCalledWith("login-sound.mp3", true, 0.5);
     });
   });
 
   it("does not play sound when soundEnabled is false", async () => {
-    mockUseSettings.mockReturnValue({ settings: { soundEnabled: false, volume: 0.5 } });
+    mockUseSettings.mockReturnValue({
+      updateSettings: vi.fn(),
+      settings: { soundEnabled: false, volume: 0.5 },
+    });
     const playSound = (await import("../utils/audioPlayer")).default;
 
     setAuth({ isAuthenticated: false });
@@ -670,17 +868,12 @@ describe("App", () => {
 
     // Confirm the thrown error was swallowed, not surfaced as an app error
     expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/network or processing error/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/network or processing error/i),
+    ).not.toBeInTheDocument();
   });
 
   // ============ ERROR BOUNDARY TESTS ============
-  // FIXED: dispatchEvent() was not reliably reaching the listeners
-  // registered by AppContent's useEffect in this environment (even when
-  // wrapped in act()). Instead, we spy on window.addEventListener to
-  // capture the real handler function AppContent registers, and invoke
-  // it directly. This bypasses jsdom's event dispatch machinery entirely,
-  // so it can't be affected by propagation quirks, other listeners, or
-  // event-construction differences across environments.
 
   it("shows the error boundary UI when a window error event fires", async () => {
     setAuth();
@@ -740,7 +933,7 @@ describe("App", () => {
 
     const handleUnhandledRejection = captureWindowListener(
       addEventListenerSpy,
-      "unhandledrejection"
+      "unhandledrejection",
     );
     expect(handleUnhandledRejection).toBeDefined();
 
@@ -750,7 +943,7 @@ describe("App", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/network or processing error occurred/i)
+        screen.getByText(/network or processing error occurred/i),
       ).toBeInTheDocument();
     });
 

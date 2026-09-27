@@ -1,7 +1,7 @@
 """Tests for timestamp consistency and registration field validation."""
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.models import Sensor, Unit, User
 from app.tests.timestamp_helpers import (
@@ -27,16 +27,13 @@ def unwrap_response(response):
 class TestTimestampConsistency:
     """Test timestamp handling consistency across environments."""
 
-    def test_user_registration_sets_all_expected_fields(self, client, db_session):
+    def test_user_registration_sets_all_expected_fields(
+        self,
+        client,
+        db_session,
+        admin_token,
+    ):
         """Test registration endpoint properly sets first_name, last_name, and timestamps."""
-        # Get auth token
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-        token = unwrap_response(response)["access_token"]
-
         # Get admin role for new user
         import time
 
@@ -59,7 +56,7 @@ class TestTimestampConsistency:
             "/api/v1/auth/register",
             json=user_data,
             headers={
-                "Authorization": f"Bearer {token}",
+                "Authorization": f"Bearer {admin_token}",
                 "Content-Type": "application/json",
             },
         )
@@ -90,16 +87,13 @@ class TestTimestampConsistency:
             f"Created and updated timestamps should be close, diff: {time_diff} seconds"
         )
 
-    def test_user_registration_without_optional_fields(self, client, db_session):
+    def test_user_registration_without_optional_fields(
+        self,
+        client,
+        db_session,
+        admin_token,
+    ):
         """Test registration works correctly when optional fields are not provided."""
-        # Get auth token
-        response = client.post(
-            "/api/v1/auth/login",
-            json={"username": "admin", "password": "admin123"},
-            headers={"Content-Type": "application/json"},
-        )
-        token = unwrap_response(response)["access_token"]
-
         # Get admin role for new user
         import time
 
@@ -120,7 +114,7 @@ class TestTimestampConsistency:
             "/api/v1/auth/register",
             json=user_data,
             headers={
-                "Authorization": f"Bearer {token}",
+                "Authorization": f"Bearer {admin_token}",
                 "Content-Type": "application/json",
             },
         )
@@ -186,7 +180,7 @@ class TestTimestampConsistency:
             id="TIMESTAMP_TEST",
             name="Timestamp Test Unit",
             serial_number="TIMESTAMP-2024-001",
-            install_date=datetime(2024, 1, 15),
+            install_date=datetime(2024, 1, 15, tzinfo=timezone.utc),
             status=UnitStatusEnum.ONLINE,
             health_status=HealthStatusEnum.OPTIMAL,
         )
@@ -199,7 +193,7 @@ class TestTimestampConsistency:
 
         # Simulate an update
         unit.name = "Updated Timestamp Test Unit"
-        simulate_db_trigger_update(unit)  # Simulate what PostgreSQL trigger would do
+        simulate_db_trigger_update(unit)
         db_session.commit()
 
         # Verify timestamp was updated
@@ -230,7 +224,7 @@ class TestTimestampConsistency:
 
         # Simulate an update
         sensor.name = "Updated Timestamp Test Sensor"
-        simulate_db_trigger_update(sensor)  # Simulate what PostgreSQL trigger would do
+        simulate_db_trigger_update(sensor)
         db_session.commit()
 
         # Verify timestamp was updated

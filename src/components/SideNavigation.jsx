@@ -1,3 +1,4 @@
+import { conditionCounts } from "../utils/conditions";
 import {
   Activity,
   AlertTriangle,
@@ -19,16 +20,16 @@ import {
   Wifi,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
 import { useSidebar } from "../context/SidebarContext";
-import { units as mockUnits } from "../data/mockUnits";
+import { useUnits } from "../context/UnitContext";
 import playSound from "../utils/audioPlayer";
 
-// NavItem component moved outside to avoid nested component definition
+// NavItem component with accessibility labels
 const NavItem = ({ item, isCollapsed, isActive, onClick }) => {
   const Icon = item.icon;
 
@@ -45,6 +46,7 @@ const NavItem = ({ item, isCollapsed, isActive, onClick }) => {
         }
       `}
       onClick={() => onClick(item)}
+      aria-label={isCollapsed ? item.label : undefined}
     >
       <Icon
         className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`}
@@ -74,27 +76,30 @@ const NavItem = ({ item, isCollapsed, isActive, onClick }) => {
   );
 };
 
+// Generate Gravatar URL from email
+const getGravatarUrl = (email, size = 32) => {
+  if (!email) return null;
+  const hash = email
+    .toLowerCase()
+    .trim()
+    .split("")
+    .reduce((acc, char) => {
+      return acc + char.charCodeAt(0).toString(16);
+    }, "");
+  return `https://www.gravatar.com/avatar/${hash}?s=${size}&d=identicon`;
+};
+
 const EnhancedSideNavigation = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
-  const { userRole, permissions, logout } = useAuth();
+  const { user, userRole, permissions, logout } = useAuth();
   const { settings } = useSettings();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [units, setUnits] = useState([]);
-
-  useEffect(() => {
-    if (userRole === "admin") {
-      setUnits(mockUnits);
-    } else {
-      setUnits(mockUnits.slice(0, 6));
-    }
-  }, [userRole]);
-
+  const { units, alerts } = useUnits();
   const totalUnits = units.length;
-  const totalAlerts = 6;
-  const totalAlarms = units.filter((unit) => unit.hasAlarm).length;
+  const { alerts: totalAlerts, alarms: totalAlarms } = conditionCounts(alerts);
 
   const navigationItems = [
     {
@@ -103,7 +108,7 @@ const EnhancedSideNavigation = () => {
       icon: LayoutDashboard,
       href: "/dashboard",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "grid-view",
@@ -111,7 +116,7 @@ const EnhancedSideNavigation = () => {
       icon: Grid3X3,
       href: "/grid-view",
       badge: totalUnits,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "alerts",
@@ -120,7 +125,7 @@ const EnhancedSideNavigation = () => {
       href: "/alerts",
       badge: totalAlerts,
       badgeColor: "orange",
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "alarms",
@@ -129,7 +134,7 @@ const EnhancedSideNavigation = () => {
       href: "/alarms",
       badge: totalAlarms,
       badgeColor: "red",
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator"],
     },
     {
       id: "history",
@@ -137,7 +142,7 @@ const EnhancedSideNavigation = () => {
       icon: History,
       href: "/history",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "reports",
@@ -145,7 +150,7 @@ const EnhancedSideNavigation = () => {
       icon: Search,
       href: "/reports",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "documents",
@@ -153,7 +158,7 @@ const EnhancedSideNavigation = () => {
       icon: FileText,
       href: "/documents",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "scada-dashboard",
@@ -161,7 +166,7 @@ const EnhancedSideNavigation = () => {
       icon: Activity,
       href: "/scada-dashboard",
       badge: null,
-      requiresPermission: "canViewAnalytics",
+      requiresPermission: "canAccessScada",
     },
     {
       id: "protocol-manager",
@@ -170,6 +175,7 @@ const EnhancedSideNavigation = () => {
       href: "/protocol-manager",
       badge: null,
       requiresPermission: "canViewProtocols",
+      roles: ["admin"], // System admin only - matches routes.js
     },
     {
       id: "analytics",
@@ -177,7 +183,7 @@ const EnhancedSideNavigation = () => {
       icon: BarChart3,
       href: "/analytics",
       badge: null,
-      roles: ["admin"],
+      roles: ["admin"], // System admin only - matches routes.js
     },
     {
       id: "system-health",
@@ -185,7 +191,7 @@ const EnhancedSideNavigation = () => {
       icon: Wifi,
       href: "/system-health",
       badge: null,
-      roles: ["admin"],
+      roles: ["admin"], // System admin only - matches routes.js
     },
     {
       id: "settings",
@@ -193,25 +199,37 @@ const EnhancedSideNavigation = () => {
       icon: Settings,
       href: "/settings",
       badge: null,
-      roles: ["admin", "user"],
+      roles: ["admin", "client_admin", "user", "operator", "viewer"],
     },
     {
       id: "admin",
-      label: "Admin Panel",
+      label: "Tenant Switcher",
       icon: Shield,
       href: "/admin",
       badge: null,
-      roles: ["admin"],
+      roles: ["admin"], // client_admin excluded — they use the dashboard header dropdown instead
+    },
+    {
+      id: "admin-users",
+      label: "User Management",
+      icon: User,
+      href: "/admin/users",
+      badge: null,
+      roles: ["admin"], // client_admin excluded — see routes.js
     },
   ];
 
   const filteredNavItems = navigationItems.filter((item) => {
-    // If item requires a specific permission, check it
-    if (item.requiresPermission) {
-      return permissions?.[item.requiresPermission] === true;
+    if (
+      item.requiresPermission &&
+      permissions?.[item.requiresPermission] !== true
+    ) {
+      return false;
     }
-    // Otherwise, check role-based access
-    return item.roles?.includes(userRole);
+    if (item.roles && !item.roles.includes(userRole)) {
+      return false;
+    }
+    return true;
   });
 
   const handleNavClick = (item) => {
@@ -226,12 +244,44 @@ const EnhancedSideNavigation = () => {
     navigate("/login");
   };
 
+  const getUserDisplayName = () => {
+    if (user?.displayName) return user.displayName;
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user?.name) return user.name;
+    if (user?.username) return user.username;
+    return userRole === "admin" ? "System Admin" : "System User";
+  };
+
+  const getUserEmail = () => {
+    if (user?.email) return user.email;
+    return userRole === "admin"
+      ? "admin@thermacore.com.au"
+      : "user@thermacore.com.au";
+  };
+
+  const getUserInitial = () => {
+    const name = getUserDisplayName();
+    return name.charAt(0).toUpperCase();
+  };
+
+  const avatarUrl =
+    user?.avatarDataUrl || (user?.email ? getGravatarUrl(user.email) : null);
+
+  const isAdminLanding = location.pathname === "/admin";
+
+  if (isAdminLanding) {
+    return null;
+  }
+
   return (
     <>
       <button
         type="button"
         onClick={() => setIsMobileOpen(!isMobileOpen)}
         className="lg:hidden fixed bottom-4 left-4 z-50 p-2 bg-blue-600 text-white rounded-lg shadow-lg"
+        aria-label="Toggle navigation menu"
       >
         {isMobileOpen ? (
           <X className="h-5 w-5" />
@@ -243,24 +293,7 @@ const EnhancedSideNavigation = () => {
       {isMobileOpen && (
         <button
           type="button"
-          className="lg:hidden fixed inset-0 z-40 bg-black"
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: "100vw",
-            height: "100vh",
-            minWidth: "100vw",
-            minHeight: "100vh",
-            maxWidth: "100vw",
-            maxHeight: "100vh",
-            margin: 0,
-            padding: 0,
-            backgroundColor: "rgb(0, 0, 0)",
-            zIndex: 40,
-          }}
+          className="lg:hidden fixed inset-0 z-40 bg-black/50"
           onClick={() => setIsMobileOpen(false)}
           aria-label="Close mobile menu"
         />
@@ -273,8 +306,10 @@ const EnhancedSideNavigation = () => {
         transition-all duration-300 ease-in-out flex-shrink-0
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
         ${isCollapsed ? "w-16 xl:w-20" : "w-48 lg:w-56 xl:w-64"}
+        flex flex-col
       `}
       >
+        {/* Header */}
         <div
           className={`flex items-center p-4 border-b border-gray-200 dark:border-gray-700 ${isCollapsed ? "justify-center" : "justify-between"}`}
         >
@@ -298,6 +333,7 @@ const EnhancedSideNavigation = () => {
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="hidden lg:flex p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -307,8 +343,9 @@ const EnhancedSideNavigation = () => {
           </button>
         </div>
 
+        {/* Navigation Items - Scrollable */}
         <div
-          className="flex-1 overflow-y-auto p-4 h-[calc(100vh-200px)]"
+          className="flex-1 overflow-y-auto p-4"
           style={{
             scrollbarWidth: "thin",
             scrollbarColor: "#cbd5e1 transparent",
@@ -316,87 +353,61 @@ const EnhancedSideNavigation = () => {
         >
           <nav className="space-y-1">
             {filteredNavItems.map((item) => (
-              <div key={item.id}>
-                <NavItem
-                  item={item}
-                  isCollapsed={isCollapsed}
-                  isActive={location.pathname === item.href}
-                  onClick={handleNavClick}
-                />
-                {item.id === "admin" && userRole === "admin" && (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex items-center w-full p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-1 mb-2"
-                  >
-                    <LogOut
-                      className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`}
-                    />
-                    {!isCollapsed && (
-                      <span className="font-medium">Logout</span>
-                    )}
-                  </button>
-                )}
-                {item.id === "settings" && userRole === "user" && (
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex items-center w-full p-3 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-1 mb-2"
-                  >
-                    <LogOut
-                      className={`h-5 w-5 ${isCollapsed ? "mx-auto" : "mr-3"} flex-shrink-0`}
-                    />
-                    {!isCollapsed && (
-                      <span className="font-medium">Logout</span>
-                    )}
-                  </button>
-                )}
-              </div>
+              <NavItem
+                key={item.id}
+                item={item}
+                isCollapsed={isCollapsed}
+                isActive={location.pathname === item.href}
+                onClick={handleNavClick}
+              />
             ))}
           </nav>
         </div>
 
-        {!(
-          (userRole === "admin" &&
-            filteredNavItems.some((item) => item.id === "admin")) ||
-          (userRole === "user" &&
-            filteredNavItems.some((item) => item.id === "settings"))
-        ) && (
-          <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-            {!isCollapsed && (
-              <div className="flex items-center space-x-3 mb-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <User className="h-4 w-4 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                    System {userRole === "admin" ? "Admin" : "User"}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {userRole === "admin"
-                      ? "admin@thermacore.com"
-                      : "user@thermacore.com"}
-                  </p>
-                </div>
+        {/* Footer with User Info and Logout - Always at bottom */}
+        <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex-shrink-0">
+          {!isCollapsed && (
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white font-medium text-sm">
+                    {getUserInitial()}
+                  </span>
+                )}
               </div>
-            )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {getUserDisplayName()}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {getUserEmail()}
+                </p>
+              </div>
+            </div>
+          )}
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={`
-                flex items-center w-full p-2 rounded-lg text-red-600 dark:text-red-400 
-                hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors
-                ${isCollapsed ? "justify-center" : "space-x-2"}
-              `}
-            >
-              <LogOut className="h-4 w-4" />
-              {!isCollapsed && (
-                <span className="text-sm font-medium">Logout</span>
-              )}
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className={`
+              flex items-center w-full p-2 rounded-lg text-red-600 dark:text-red-400 
+              hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors
+              ${isCollapsed ? "justify-center" : "space-x-2"}
+            `}
+            aria-label={isCollapsed ? "Logout" : undefined}
+          >
+            <LogOut className="h-4 w-4 flex-shrink-0" />
+            {!isCollapsed && (
+              <span className="text-sm font-medium">Logout</span>
+            )}
+          </button>
+        </div>
       </aside>
     </>
   );

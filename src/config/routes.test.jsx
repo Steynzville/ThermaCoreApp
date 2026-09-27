@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
-import React, { Suspense } from "react";
+import { Suspense } from "react";
 import routes from "./routes";
 
 // Mock all lazy-loaded components
@@ -11,6 +11,10 @@ vi.mock("../components/Dashboard", () => ({
 
 vi.mock("../components/HistoryView", () => ({
   default: () => <div data-testid="history-page">History</div>,
+}));
+
+vi.mock("../pages/AdminLanding", () => ({
+  default: () => <div data-testid="admin-landing-page">Admin Landing</div>,
 }));
 
 vi.mock("../components/AdminPanel", () => ({
@@ -38,7 +42,9 @@ vi.mock("../components/RemoteControl", () => ({
 }));
 
 vi.mock("../components/UnitPerformance", () => ({
-  default: () => <div data-testid="unit-performance-page">Unit Performance</div>,
+  default: () => (
+    <div data-testid="unit-performance-page">Unit Performance</div>
+  ),
 }));
 
 vi.mock("../components/ViewAnalytics", () => ({
@@ -50,7 +56,9 @@ vi.mock("../components/SystemHealth", () => ({
 }));
 
 vi.mock("../components/SynchronizeUnitsOverview", () => ({
-  default: () => <div data-testid="synchronize-units-page">Synchronize Units</div>,
+  default: () => (
+    <div data-testid="synchronize-units-page">Synchronize Units</div>
+  ),
 }));
 
 vi.mock("../components/UserRegistrationForm", () => ({
@@ -58,11 +66,15 @@ vi.mock("../components/UserRegistrationForm", () => ({
 }));
 
 vi.mock("../components/AdvancedAnalyticsDashboard", () => ({
-  default: () => <div data-testid="advanced-analytics-page">Advanced Analytics</div>,
+  default: () => (
+    <div data-testid="advanced-analytics-page">Advanced Analytics</div>
+  ),
 }));
 
 vi.mock("../components/MultiProtocolManager", () => ({
-  default: () => <div data-testid="protocol-manager-page">Protocol Manager</div>,
+  default: () => (
+    <div data-testid="protocol-manager-page">Protocol Manager</div>
+  ),
 }));
 
 vi.mock("../pages/ReportsPage", () => ({
@@ -81,18 +93,6 @@ vi.mock("../components/ScadaMainPage", () => ({
   default: () => <div data-testid="scada-main-page">SCADA Main</div>,
 }));
 
-vi.mock("../components/UnitDetails", () => ({
-  default: () => <div data-testid="unit-details-page">Unit Details</div>,
-}));
-
-vi.mock("../components/UserUnitDetails", () => ({
-  default: () => <div data-testid="user-unit-details-page">User Unit Details</div>,
-}));
-
-vi.mock("../components/UnitControl", () => ({
-  default: () => <div data-testid="unit-control-page">Unit Control</div>,
-}));
-
 // Wrapper with Suspense for lazy components
 const renderRoute = (path) => {
   return render(
@@ -105,22 +105,20 @@ const renderRoute = (path) => {
 
             const Component = route.component;
             const element = route.specialHandling ? (
-              <div data-testid={`special-${route.specialHandling}`}>Special Handler</div>
+              <div data-testid={`special-${route.specialHandling}`}>
+                Special Handler
+              </div>
             ) : Component ? (
               <Component />
             ) : null;
 
             return (
-              <Route
-                key={route.path}
-                path={route.path}
-                element={element}
-              />
+              <Route key={route.path} path={route.path} element={element} />
             );
           })}
         </Routes>
       </Suspense>
-    </MemoryRouter>
+    </MemoryRouter>,
   );
 };
 
@@ -152,7 +150,9 @@ describe("Routes Configuration", () => {
 
   it("should render remote control for /remote-control", async () => {
     renderRoute("/remote-control");
-    expect(await screen.findByTestId("remote-control-page")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("remote-control-page"),
+    ).toBeInTheDocument();
   });
 
   it("should render grid view for /grid-view", async () => {
@@ -175,8 +175,13 @@ describe("Routes Configuration", () => {
     expect(await screen.findByTestId("documents-page")).toBeInTheDocument();
   });
 
-  it("should render admin panel for /admin", async () => {
+  it("should render admin landing for /admin", async () => {
     renderRoute("/admin");
+    expect(await screen.findByTestId("admin-landing-page")).toBeInTheDocument();
+  });
+
+  it("should render admin panel for /admin/users", async () => {
+    renderRoute("/admin/users");
     expect(await screen.findByTestId("admin-page")).toBeInTheDocument();
   });
 
@@ -187,7 +192,9 @@ describe("Routes Configuration", () => {
 
   it("should render advanced analytics for /advanced-analytics", async () => {
     renderRoute("/advanced-analytics");
-    expect(await screen.findByTestId("advanced-analytics-page")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("advanced-analytics-page"),
+    ).toBeInTheDocument();
   });
 
   it("should render SCADA main for /scada-dashboard", async () => {
@@ -197,12 +204,16 @@ describe("Routes Configuration", () => {
 
   it("should render realtime SCADA for /realtime-scada", async () => {
     renderRoute("/realtime-scada");
-    expect(await screen.findByTestId("realtime-scada-page")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("realtime-scada-page"),
+    ).toBeInTheDocument();
   });
 
   it("should render protocol manager for /protocol-manager", async () => {
     renderRoute("/protocol-manager");
-    expect(await screen.findByTestId("protocol-manager-page")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("protocol-manager-page"),
+    ).toBeInTheDocument();
   });
 
   it("should render system health for /system-health", async () => {
@@ -212,34 +223,40 @@ describe("Routes Configuration", () => {
 
   it("should render synchronize units for /synchronize-units", async () => {
     renderRoute("/synchronize-units");
-    expect(await screen.findByTestId("synchronize-units-page")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("synchronize-units-page"),
+    ).toBeInTheDocument();
   });
 
   it("should render unit performance for /unit-performance/:id", async () => {
     renderRoute("/unit-performance/123");
-    expect(await screen.findByTestId("unit-performance-page")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("unit-performance-page"),
+    ).toBeInTheDocument();
   });
 
-  it("should handle /units route with special handling", async () => {
+  it("renders the scoped unit grid at /units", async () => {
     renderRoute("/units");
-    expect(await screen.findByTestId("special-unit-role-based")).toBeInTheDocument();
+    expect(await screen.findByTestId("grid-view-page")).toBeInTheDocument();
   });
 
   it("should handle /unit/:id route with special handling", async () => {
     renderRoute("/unit/123");
-    expect(await screen.findByTestId("special-unit-role-based")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("special-unit-role-based"),
+    ).toBeInTheDocument();
   });
 
   it("should handle /unit-details/:id route with special handling", async () => {
     renderRoute("/unit-details/123");
-    expect(await screen.findByTestId("special-unit-details-role-based")).toBeInTheDocument();
+    expect(
+      await screen.findByTestId("special-unit-details-role-based"),
+    ).toBeInTheDocument();
   });
 
   it("should have correct number of routes", () => {
-    // Only count routes with actual components or special handling
-    // (routes with component: null and no specialHandling are skipped)
-    const validRoutes = routes.filter(r => r.component || r.specialHandling);
-    expect(validRoutes.length).toBe(22);
+    const validRoutes = routes.filter((r) => r.component || r.specialHandling);
+    expect(validRoutes.length).toBe(23);
   });
 
   it("should have correct route structure", () => {
@@ -251,16 +268,41 @@ describe("Routes Configuration", () => {
     });
   });
 
-  it("should have admin-only routes with correct roles", () => {
-    const adminRoutes = routes.filter((r) => r.roles.includes("admin") && !r.roles.includes("user"));
-    expect(adminRoutes.length).toBeGreaterThan(0);
-    adminRoutes.forEach((route) => {
-      expect(route.roles).toEqual(["admin"]);
+  // Admin management route (/admin) should have both admin AND client_admin
+  it("should have client_admin access to admin landing route but not user management", () => {
+    const managementRoutes = routes.filter((r) => r.path === "/admin");
+    managementRoutes.forEach((route) => {
+      expect(route.roles).toContain("admin");
+      expect(route.roles).toContain("client_admin");
+    });
+
+    // /admin/users is now system admin only
+    const userManagementRoute = routes.filter((r) => r.path === "/admin/users");
+    userManagementRoute.forEach((route) => {
+      expect(route.roles).toContain("admin");
+      expect(route.roles).not.toContain("client_admin");
+    });
+
+    const strictAdminOnlyRoutes = routes.filter(
+      (r) =>
+        r.path === "/analytics" ||
+        r.path === "/system-health" ||
+        r.path === "/protocol-manager",
+    );
+    strictAdminOnlyRoutes.forEach((route) => {
+      expect(route.roles).toContain("admin");
+      expect(route.roles).not.toContain("client_admin");
+      // Protocol Manager should be admin only (no user/operator/viewer)
+      if (route.path === "/protocol-manager") {
+        expect(route.roles).toEqual(["admin"]);
+      }
     });
   });
 
   it("should have routes accessible by both admin and user", () => {
-    const userRoutes = routes.filter((r) => r.roles.includes("user") && r.roles.includes("admin"));
+    const userRoutes = routes.filter(
+      (r) => r.roles.includes("user") && r.roles.includes("admin"),
+    );
     expect(userRoutes.length).toBeGreaterThan(0);
     userRoutes.forEach((route) => {
       expect(route.roles).toContain("admin");
@@ -275,12 +317,55 @@ describe("Routes Configuration", () => {
     expect(registerRoute.roles).toEqual([]);
   });
 
-  it("should have routes with empty roles array", () => {
-    const emptyRolesRoutes = routes.filter((r) => r.roles.length === 0 && r.path !== "/register");
+  it("should have routes with empty roles array (open to all authenticated users)", () => {
+    const emptyRolesRoutes = routes.filter(
+      (r) => r.roles.length === 0 && r.path !== "/register",
+    );
     expect(emptyRolesRoutes.length).toBeGreaterThan(0);
     emptyRolesRoutes.forEach((route) => {
       expect(route.isProtected).toBe(true);
+      expect([
+        "/advanced-analytics",
+        "/scada-dashboard",
+        "/realtime-scada",
+      ]).toContain(route.path);
     });
+  });
+
+  // isAdminRoute should be properly scoped - client_admin only on /admin
+  it("should have isAdminRoute routes properly scoped (client_admin only on /admin)", () => {
+    const adminOnlyRoutes = routes.filter((r) => r.isAdminRoute === true);
+    expect(adminOnlyRoutes.length).toBeGreaterThan(0);
+    adminOnlyRoutes.forEach((route) => {
+      expect(route.roles).toContain("admin");
+      if (route.path === "/admin") {
+        expect(route.roles).toContain("client_admin");
+      } else {
+        expect(route.roles).not.toContain("client_admin");
+        // Protocol Manager should be admin only (no other roles)
+        if (route.path === "/protocol-manager") {
+          expect(route.roles).toEqual(["admin"]);
+        }
+      }
+    });
+  });
+
+  // Client Admin should NOT have access to user-only routes
+  it("should not include client_admin in user-only routes", () => {
+    const userOnlyRoutes = routes.filter(
+      (r) =>
+        r.roles.includes("user") && !r.roles.includes("admin") && !r.isPublic,
+    );
+    userOnlyRoutes.forEach((route) => {
+      expect(route.roles).not.toContain("client_admin");
+    });
+  });
+
+  // Protocol Manager should be admin only
+  it("should restrict protocol-manager to admin only", () => {
+    const route = routes.find((r) => r.path === "/protocol-manager");
+    expect(route).toBeDefined();
+    expect(route.roles).toEqual(["admin"]);
   });
 
   it("should have lazy loaded components", () => {

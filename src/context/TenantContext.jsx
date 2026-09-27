@@ -1,118 +1,143 @@
-import { createContext, useContext, useEffect, useState } from "react";
-
-import { apiGetJson } from "../utils/apiFetch";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import { useAuth } from "./AuthContext";
+import { apiGetJson } from "../utils/apiFetch";
+import { isDemoMode } from "../config/runtime";
+import { demoTenants } from "../data/demoPortfolio";
+import { sameId, tenantIdOf, clientIdOf } from "../utils/portfolio";
 
 const TenantContext = createContext();
-
-// Shared constant for API base URL fallback
-const API_BASE_URL_FALLBACK = "https://thermacoreapp.onrender.com";
-
 export const useTenant = () => {
   const context = useContext(TenantContext);
-  // FIXED: Always throw when used outside provider - no test detection
-  if (!context) {
+  if (!context)
     throw new Error("useTenant must be used within a TenantProvider");
-  }
   return context;
 };
 
-export const TenantProvider = ({ children }) => {
+export function TenantProvider({ children }) {
   const { user, backendRole } = useAuth();
-  const [currentTenant, setCurrentTenant] = useState(null);
-  const [availableTenants, setAvailableTenants] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // Check if user is admin
+  const [state, setState] = useState({
+    owner: null,
+    tenants: [],
+    assigned: null,
+    loading: true,
+    error: null,
+  });
+  const [selection, setSelection] = useState({ owner: null, id: null });
+  const owner = user
+    ? `${user.id}:${backendRole}:${tenantIdOf(user) ?? ""}:${clientIdOf(user) ?? ""}`
+    : null;
   const isAdmin = backendRole === "admin";
-
-  // Load current tenant on component mount
+  const isClientAdmin = backendRole === "client_admin";
+  const canSwitchTenants = isAdmin || isClientAdmin;
   useEffect(() => {
-    const loadCurrentTenant = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
+    let cancelled = false;
+    setState({
+      owner,
+      tenants: [],
+      assigned: null,
+      loading: !!user,
+      error: null,
+    });
+    if (!user) return;
+    (async () => {
+      let tenants = [],
+        assigned = null,
+        error = null;
       try {
-        setIsLoading(true);
-        setError(null);
-
-        // Get current tenant information
-        const response = await apiGetJson(
-          `${import.meta.env.VITE_API_BASE_URL || API_BASE_URL_FALLBACK}/api/v1/tenants/current`,
-        );
-
-        if (response.data) {
-          setCurrentTenant(response.data);
-        } else if (response.message) {
-          // Admin user with cross-tenant access
-          setCurrentTenant(null);
+        if (canSwitchTenants) {
+          const response = await apiGetJson("/api/v1/tenants?active_only=true");
+          tenants = response.data || [];
+          assigned =
+            tenants.find((t) => sameId(t.id, tenantIdOf(user))) || null;
+        } else {
+          const current = await apiGetJson("/api/v1/tenants/current");
+          assigned = current.data || null;
+          if (assigned) tenants = [assigned];
         }
       } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+        error = err.message;
       }
-    };
-
-    loadCurrentTenant();
-  }, [user]);
-
-  // Load available tenants for admin users
-  useEffect(() => {
-    const loadAvailableTenants = async () => {
-      if (!isAdmin) {
-        return;
+      if (isDemoMode && error !== "Unauthorized") {
+        const merged = new Map(demoTenants.map((t) => [String(t.id), t]));
+        tenants.forEach((t) => merged.set(String(t.id), t));
+        tenants = [...merged.values()];
       }
-
-      try {
-        const response = await apiGetJson(
-          `${import.meta.env.VITE_API_BASE_URL || API_BASE_URL_FALLBACK}/api/v1/tenants?active_only=true`,
-        );
-
-        if (response.data) {
-          setAvailableTenants(response.data);
-        }
-      } catch (_err) {}
+      // No fallback to everybody's tenants if a client's filter is empty.
+      tenants = tenants.filter(
+        (t) =>
+          isAdmin ||
+          (isClientAdmin
+            ? sameId(clientIdOf(t), clientIdOf(user))
+            : sameId(t.id, assigned?.id ?? tenantIdOf(user))),
+      );
+      if (!canSwitchTenants)
+        assigned =
+          tenants.find((t) => sameId(t.id, assigned?.id ?? tenantIdOf(user))) ||
+          null;
+      if (!cancelled)
+        setState({ owner, tenants, assigned, loading: false, error });
+    })();
+    return () => {
+      cancelled = true;
     };
-
-    if (isAdmin) {
-      loadAvailableTenants();
-    }
-  }, [isAdmin]);
-
-  // Switch tenant (admin only)
-  const switchTenant = (tenantId) => {
-    if (!isAdmin) {
-      return;
-    }
-
-    // Find the tenant in available tenants
-    const tenant = availableTenants.find((t) => t.id === tenantId);
-    setCurrentTenant(tenant || null);
-  };
-
-  // Get tenant ID for API calls
-  const getTenantQueryParam = () => {
-    if (!isAdmin || !currentTenant) {
-      return "";
-    }
-    return `?tenant_id=${currentTenant.id}`;
-  };
-
-  const value = {
-    currentTenant,
-    availableTenants,
-    isLoading,
-    error,
-    isAdmin,
-    switchTenant,
-    getTenantQueryParam,
-  };
-
+  }, [owner]);
+  const ready = state.owner === owner;
+  const availableTenants = ready ? state.tenants : [];
+  const currentTenant = canSwitchTenants
+    ? availableTenants.find(
+        (t) => selection.owner === owner && sameId(t.id, selection.id),
+      ) || null
+    : ready
+      ? state.assigned
+      : null;
+  const switchTenant = useCallback(
+    (id) => {
+      if (
+        canSwitchTenants &&
+        (id == null || availableTenants.some((t) => sameId(t.id, id)))
+      ) {
+        setSelection({ owner, id });
+      }
+    },
+    [owner, canSwitchTenants, availableTenants],
+  );
+  const value = useMemo(
+    () => ({
+      currentTenant,
+      availableTenants,
+      isLoading: !ready || state.loading,
+      isLoadingTenants: !ready || state.loading,
+      error: state.error,
+      isAdmin,
+      isClientAdmin,
+      canSwitchTenants,
+      switchTenant,
+      assignedTenantId: state.assigned?.id ?? tenantIdOf(user),
+      getTenantQueryParam: () =>
+        currentTenant
+          ? `?tenant_id=${encodeURIComponent(currentTenant.id)}`
+          : "",
+    }),
+    [
+      currentTenant,
+      availableTenants,
+      ready,
+      state,
+      isAdmin,
+      isClientAdmin,
+      canSwitchTenants,
+      switchTenant,
+      user,
+    ],
+  );
   return (
     <TenantContext.Provider value={value}>{children}</TenantContext.Provider>
   );
-};
+}

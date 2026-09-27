@@ -1,3 +1,4 @@
+import { isDemoMode } from "../config/runtime";
 import {
   Activity,
   AlertCircle,
@@ -10,7 +11,9 @@ import {
   Zap,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 import DNP3MonitoringDashboard from "./protocol/DNP3MonitoringDashboard";
 import ModbusDeviceModal from "./protocol/ModbusDeviceModal";
 import MQTTManagementPanel from "./protocol/MQTTManagementPanel";
@@ -38,6 +41,17 @@ import {
 import { apiGetJson } from "../utils/apiFetch";
 
 const MultiProtocolManager = () => {
+  const { user, userRole, backendRole } = useAuth();
+  const isAdmin =
+    user?.role === "admin" ||
+    user?.role === "Administrator" ||
+    userRole === "admin" ||
+    backendRole === "admin" ||
+    user?.backendRole === "admin";
+
+  // ============================================================
+  // ALL HOOKS DECLARED UNCONDITIONALLY BEFORE ANY EARLY RETURN
+  // ============================================================
   const [protocolsStatus, setProtocolsStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -75,8 +89,7 @@ const MultiProtocolManager = () => {
   }, []);
 
   // Check if we're in mock mode
-  const isMockMode =
-    import.meta.env.VITE_MOCK_MODE === "true" || import.meta.env.DEV;
+  const isMockMode = isDemoMode;
 
   const mockData = {
     timestamp: new Date().toISOString(),
@@ -143,9 +156,7 @@ const MultiProtocolManager = () => {
             ...mockData.protocols.mqtt,
             metrics: {
               ...mockData.protocols.mqtt.metrics,
-              messages_sent:
-                mockData.protocols.mqtt.metrics.messages_sent +
-                Math.floor(Math.random() * 10),
+              messages_sent: mockData.protocols.mqtt.metrics.messages_sent + 0,
             },
           },
         },
@@ -321,6 +332,10 @@ const MultiProtocolManager = () => {
         setMqttPanelOpen(true);
         break;
       case "simulator":
+        if (!isDemoMode) {
+          toast.error("Simulator configuration requires explicit demo mode.");
+          return;
+        }
         setSimulatorDialogOpen(true);
         break;
       default:
@@ -361,10 +376,20 @@ const MultiProtocolManager = () => {
     return Math.round(Math.min(10 * 1.5 ** consecutiveErrors, 60));
   };
 
+  // ============================================================
+  // EARLY RETURN AFTER ALL HOOKS HAVE BEEN DECLARED
+  // ============================================================
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen" data-testid="loading-state">
+      <div
+        className="flex items-center justify-center min-h-screen"
+        data-testid="loading-state"
+      >
         <div className="flex flex-col items-center gap-4">
           <RefreshCw className="h-8 w-8 animate-spin text-primary dark:text-primary-foreground" />
           <p className="text-lg text-muted-foreground">
@@ -378,7 +403,10 @@ const MultiProtocolManager = () => {
   // Error state
   if (!protocolsStatus) {
     return (
-      <div className="flex items-center justify-center min-h-screen px-4" data-testid="error-state">
+      <div
+        className="flex items-center justify-center min-h-screen px-4"
+        data-testid="error-state"
+      >
         <div className="text-center max-w-md">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-foreground dark:text-gray-100 mb-2">
@@ -390,7 +418,10 @@ const MultiProtocolManager = () => {
               : "Could not retrieve protocol status."}
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button onClick={() => loadData().catch(() => {})} disabled={isPolling}>
+            <Button
+              onClick={() => loadData().catch(() => {})}
+              disabled={isPolling}
+            >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isPolling ? "animate-spin" : ""}`}
               />
@@ -611,22 +642,32 @@ const MultiProtocolManager = () => {
                       )}
 
                       {protocol.metrics && (
-                        <div className="p-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-md" data-testid="metrics-container">
+                        <div
+                          className="p-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-md"
+                          data-testid="metrics-container"
+                        >
                           <p className="text-xs font-semibold text-slate-800 dark:text-gray-200 mb-1">
                             Metrics:
                           </p>
-                          {Object.entries(protocol.metrics).map(([key, value]) => (
-                            <div
-                              key={key}
-                              className="flex justify-between text-xs text-slate-600 dark:text-slate-300 gap-2"
-                              data-testid={`metric-${key}`}
-                            >
-                              <span className="truncate">
-                                {key.replace(/_/g, " ")}:
-                              </span>
-                              <span className="font-medium text-slate-900 dark:text-white" data-testid={`metric-value-${key}`}>{value}</span>
-                            </div>
-                          ))}
+                          {Object.entries(protocol.metrics).map(
+                            ([key, value]) => (
+                              <div
+                                key={key}
+                                className="flex justify-between text-xs text-slate-600 dark:text-slate-300 gap-2"
+                                data-testid={`metric-${key}`}
+                              >
+                                <span className="truncate">
+                                  {key.replace(/_/g, " ")}:
+                                </span>
+                                <span
+                                  className="font-medium text-slate-900 dark:text-white"
+                                  data-testid={`metric-value-${key}`}
+                                >
+                                  {value}
+                                </span>
+                              </div>
+                            ),
+                          )}
                         </div>
                       )}
 
@@ -800,6 +841,10 @@ const MultiProtocolManager = () => {
                   <Button
                     className="flex-1 min-h-[44px]"
                     onClick={() => {
+                      if (!isDemoMode) {
+                        toast.error("Simulators are unavailable in live mode.");
+                        return;
+                      }
                       setProtocolsStatus((prev) => {
                         if (!prev) return prev;
                         return {

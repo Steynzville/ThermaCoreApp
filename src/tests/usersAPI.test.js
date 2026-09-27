@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { deleteUser, getAllUsers } from "../services/usersAPI";
+import { deleteUser, getAllUsers, updateUser } from "../services/usersAPI";
 import * as apiFetch from "../utils/apiFetch";
 
 // Mock the apiFetch module
 vi.mock("../utils/apiFetch", () => ({
   apiGet: vi.fn(),
   apiDelete: vi.fn(),
+  apiPut: vi.fn(),
 }));
 
 describe("usersAPI", () => {
@@ -137,6 +138,138 @@ describe("usersAPI", () => {
       );
 
       await expect(deleteUser(123)).rejects.toThrow("Failed to delete user");
+    });
+  });
+
+  describe("updateUser", () => {
+    it("should update a user by ID with full payload", async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          id: 1,
+          username: "john_doe",
+          email: "john@thermacore.com",
+          first_name: "Johnathan",
+          last_name: "Doe",
+          role: { id: 1, name: "admin" },
+          is_active: true,
+        }),
+      };
+
+      vi.spyOn(apiFetch, "apiPut").mockResolvedValue(mockResponse);
+
+      const payload = {
+        username: "john_doe",
+        email: "john@thermacore.com",
+        first_name: "Johnathan",
+        last_name: "Doe",
+        phone_number: "555-1111",
+        company: "Thermacore",
+        department: "Engineering",
+        position: "Lead",
+        role_id: 1,
+        is_active: true,
+      };
+
+      const result = await updateUser(1, payload);
+
+      expect(apiFetch.apiPut).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/users/1"),
+        payload,
+        expect.objectContaining({
+          showToastOnError: true,
+          retries: 1,
+          retryDelay: 1000,
+        }),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.status).toBe(200);
+    });
+
+    it("should handle errors when updating a user", async () => {
+      vi.spyOn(apiFetch, "apiPut").mockRejectedValue(
+        new Error("Failed to update user"),
+      );
+
+      const payload = { username: "new_username" };
+
+      await expect(updateUser(1, payload)).rejects.toThrow("Failed to update user");
+    });
+
+    it("should send only updated fields (partial update via PUT)", async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({ id: 1, username: "new_username" }),
+      };
+
+      vi.spyOn(apiFetch, "apiPut").mockResolvedValue(mockResponse);
+
+      const payload = { username: "new_username" };
+
+      await updateUser(1, payload);
+
+      expect(apiFetch.apiPut).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/users/1"),
+        payload,
+        expect.any(Object),
+      );
+    });
+
+    it("should update user role", async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          id: 1,
+          username: "john_doe",
+          role: { id: 2, name: "client_admin" },
+        }),
+      };
+
+      vi.spyOn(apiFetch, "apiPut").mockResolvedValue(mockResponse);
+
+      const payload = { role_id: 2 };
+
+      const result = await updateUser(1, payload);
+
+      expect(apiFetch.apiPut).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/users/1"),
+        payload,
+        expect.any(Object),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.status).toBe(200);
+    });
+
+    it("should update user status (activate/deactivate)", async () => {
+      const mockResponse = {
+        ok: true,
+        status: 200,
+        json: vi.fn().mockResolvedValue({
+          id: 1,
+          username: "john_doe",
+          is_active: false,
+        }),
+      };
+
+      vi.spyOn(apiFetch, "apiPut").mockResolvedValue(mockResponse);
+
+      const payload = { is_active: false };
+
+      const result = await updateUser(1, payload);
+
+      expect(apiFetch.apiPut).toHaveBeenCalledWith(
+        expect.stringContaining("/api/v1/users/1"),
+        payload,
+        expect.any(Object),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.status).toBe(200);
     });
   });
 });

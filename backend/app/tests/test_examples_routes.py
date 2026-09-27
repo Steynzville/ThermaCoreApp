@@ -1,8 +1,5 @@
 """Tests for the examples routes."""
 
-import pytest
-from flask import g
-
 
 def test_comprehensive_example_success(client):
     """Test comprehensive example endpoint with valid data and query parameters."""

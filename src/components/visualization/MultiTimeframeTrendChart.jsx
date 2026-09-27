@@ -56,11 +56,19 @@ const MultiTimeframeTrendChart = ({
   showControls = true,
   height = 400,
   onExport,
+  onTimeframeChange,
 }) => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(defaultTimeframe);
   const [selectedChartType, setSelectedChartType] = useState(defaultChartType);
-  const selectedMetrics = useMemo(() => metrics.map((m) => m.dataKey), [metrics]);
+  const [selectedMetric, setSelectedMetric] = useState(metrics[0]?.dataKey);
+  const selectedMetrics = [
+    metrics.some((metric) => metric.dataKey === selectedMetric)
+      ? selectedMetric
+      : metrics[0]?.dataKey,
+  ];
   const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => setSelectedTimeframe(defaultTimeframe), [defaultTimeframe]);
 
   // Detect dark mode for tooltip styling
   useEffect(() => {
@@ -135,9 +143,10 @@ const MultiTimeframeTrendChart = ({
       if (values.length > 0) {
         const firstValue = values[0];
         const lastValue = values[values.length - 1];
-        const trend = values.length > 1 && firstValue !== 0
-          ? ((lastValue - firstValue) / firstValue) * 100
-          : 0;
+        const trend =
+          values.length > 1 && firstValue !== 0
+            ? ((lastValue - firstValue) / firstValue) * 100
+            : 0;
 
         stats[metric.dataKey] = {
           min: Math.min(...values),
@@ -346,7 +355,10 @@ const MultiTimeframeTrendChart = ({
             <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={selectedTimeframe}
-                onValueChange={setSelectedTimeframe}
+                onValueChange={(value) => {
+                  setSelectedTimeframe(value);
+                  onTimeframeChange?.(value);
+                }}
               >
                 <SelectTrigger className="w-40">
                   <SelectValue />
@@ -360,6 +372,20 @@ const MultiTimeframeTrendChart = ({
                 </SelectContent>
               </Select>
 
+              {metrics.length > 1 && (
+                <select
+                  aria-label="Trend metric"
+                  className="bg-background border rounded-md p-2"
+                  value={selectedMetrics[0]}
+                  onChange={(event) => setSelectedMetric(event.target.value)}
+                >
+                  {metrics.map((metric) => (
+                    <option key={metric.dataKey} value={metric.dataKey}>
+                      {metric.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <Tabs
                 value={selectedChartType}
                 onValueChange={setSelectedChartType}
@@ -391,7 +417,8 @@ const MultiTimeframeTrendChart = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             {metrics.map((metric) => {
               const stat = statistics[metric.dataKey];
-              if (!stat) return null;
+              if (!stat || !selectedMetrics.includes(metric.dataKey))
+                return null;
 
               return (
                 <div key={metric.dataKey} className="p-2 bg-muted rounded-lg">

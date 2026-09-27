@@ -26,7 +26,7 @@
 ## 1. Executive Summary
 
 ### 1.1 The Market Opportunity & The ThermaCore Solution
-The global transition to decentralized utility infrastructure has created high demand for off-grid and modular utility generation. ThermaCore addresses this by designing and manufacturing advanced, high-efficiency **Modular Power and Water Generators**. 
+The global transition to decentralized utility infrastructure has created high demand for off-grid and modular utility generation. ThermaCore addresses this by designing and manufacturing advanced, high-efficiency **Modular Power and Water Generators**.
 
 However, hardware alone is only half the equation. Traditional decentralized assets are notoriously difficult to monitor, maintain, and coordinate. Operators struggle with siloed legacy supervisory systems that require dedicated physical control rooms, expensive licensing fees, and lack secure remote over-the-air (OTA) control capabilities.
 
@@ -47,7 +47,8 @@ However, hardware alone is only half the equation. Traditional decentralized ass
 ### 1.2 Strategic Accomplishments
 * **Enterprise SCADA Platform Completed**: We have successfully designed, built, and deployed a comprehensive monitoring and management platform that serves as a key value driver.
 * **Fully Sales & Demonstration Ready**: The platform is fully functional and operates live alongside our physical generator prototype, showing potential customers exactly how they will monitor and manage their deployed assets in real time.
-* **Dramatically Improved Plant Economics**: Integrated thermodynamic modeling evaluates operational metrics (such as the Coefficient of Performance [COP] and exchanger heat transfer rates) in real time, driving an average **+18.4% efficiency lift** and a **34.2% reduction in unplanned maintenance downtime**.
+* **Optimized Plant Economics**: Integrated thermodynamic modeling evaluates operational metrics (such as the Coefficient of Performance [COP] and exchanger heat transfer rates) in real time. Modeling indicates potential efficiency gains of +18.4% and downtime reduction of 34.2% through predictive maintenance and continuous optimization - capabilities ready for pilot validation with our first customers.
+* **Production-Grade Reliability**: Validated through 5,504 automated tests with 91.78% frontend coverage and 85.63% backend coverage, ensuring enterprise-grade stability from day one.
 
 ---
 
@@ -55,8 +56,9 @@ However, hardware alone is only half the equation. Traditional decentralized ass
 
 Rather than relying on low-margin hardware-only transactions, ThermaCore employs a highly lucrative **Dual Revenue Model** that combines traditional industrial sales with high-margin recurring software revenues.
 
+**THERMACORE DUAL-STREAM REVENUE ENGINE**
+
 ```
-                  THERMACORE DUAL-STREAM REVENUE ENGINE
 ┌─────────────────────────────────────────┐     ┌─────────────────────────────────────────┐
 │     CAPEX STREAM: GENERATOR SALES       │  +  │    OPEX STREAM: MONITORING SUBSCRIPTION │
 │  • High-performance physical assets     │     │  • Live SCADA dashboard & controls access│
@@ -89,15 +91,15 @@ The ThermaCore SCADA platform utilizes a modern, robust, and highly resilient de
 │             React 19 SPA (Vite + Framer Motion + Recharts)             │
 │            Served securely and globally with responsive views          │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ HTTPS (REST API) & WSS (WebSockets)
-                                    ▼
+│ HTTPS (REST API) & WSS (WebSockets)
+▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                     APPLICATION CONTROL LAYER (API)                    │
 │                 Python 3.9+ Flask Framework (WSGI App)                 │
 │                 Encapsulated in Multi-Stage Containers                 │
 └───────────────────────────────────┬────────────────────────────────────┘
-                                    │ TLS Connection Pool (SQLAlchemy)
-                                    ▼
+│ TLS Connection Pool (SQLAlchemy)
+▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                     TIME-SERIES PERSISTENCE LAYER                      │
 │             PostgreSQL + TimescaleDB Serverless Hyper-tables            │
@@ -139,25 +141,35 @@ The operational strength of the ThermaCore SCADA platform is validated across 10
 * **Session Integrity**: Operators access the system through a secure gateway. Upon verification, the backend issues an ephemeral JWT access token (15-minute lifespan) and an encrypted refresh token (7-day lifespan) stored inside an HTTP-only, secure, same-site cookie to mitigate Cross-Site Scripting (XSS).
 * **Defensive Lockouts**: Automatically tracks login attempts per user and IP address, triggering automated IP blocklists upon detecting potential brute-force vectors.
 
-### 4.2 Main Live Telemetry Dashboard
-* **Real-Time KPIs**: Renders plant-wide Key Performance Indicators (KPIs) in real time: active unit ratios, aggregated power output, clean water production rates, average efficiency curves, and critical system alarms.
+### 4.2 Main Live Telemetry Dashboard & Unit Monitoring
+* **Real-Time KPIs**: Renders plant-wide Key Performance Indicators (KPIs) and standardized unit telemetry vitals in real time:
+  * **AWG Water Level (%)**: Atmospheric water generation tank storage capacity.
+  * **Temp Out - Chill & Hot (°C)**: Thermal output loop temperatures for chilled and hot operational lines.
+  * **Differential Pressure (bar)**: Differential pressure monitoring across internal heat exchanger loops.
+  * **Flow Rate Out - Chill & Hot (L/min)**: Volumetric liquid mass flow rates across cooling and heating outputs.
+  * **Battery Voltage (V)**: DC power supply health for local telemetry backup and control PLCs.
 * **Operator Interface**: Fully responsive panels utilizing Framer Motion for smooth viewport transitions.
 
-### 4.3 Secure Remote Edge Control
-* **PhysicalCommand Override**: Empowers administrators and certified operators to send physical commands directly to modular generators (e.g., initiating emergency shutdown, adjusting mechanical valve apertures, throttling hydraulic pump velocities).
+### 4.3 Secure Remote Edge Control & Production Setpoints
+* **Physical Command Override**: Empowers administrators and certified operators to send physical commands directly to modular generators (e.g., initiating emergency shutdown, adjusting mechanical valve apertures, throttling hydraulic pump velocities).
+* **Thermal & AWG Production Setpoints**:
+  * **Power Production Setpoint (0–100%)**: Controls target thermal power output. Reducing to 0% triggers automated soft-shutdown.
+  * **AWG Water Production Setpoint (0–100%)**: Controls atmospheric water generation rates; 0% disables water production loop.
+  * **Operation Mode Presets**: Quick-select modes for **Balanced (50/50)**, **Power Priority (90/20)**, **AWG Water Priority (30/90)**, and Custom configurations.
 * **Cryptographic Signing**: Every control request undergoes a strict structural payload validation, requiring double-operator confirmation ("four-eyes principle") for safety-critical overrides.
 
 ### 4.4 Interactive Alarm Management
-* **Dynamic Classification**: Monitored sensor nodes trigger real-time alarms if telemetry breaches customized high/low safety thresholds. Alarms are classified dynamically:
-  * `Critical` (triggers automated local safety shutdowns)
-  * `Warning` (indicates abnormal pressure, temperature, or flow-rate trends)
-  * `Info` (standard physical state alterations)
+* **Dynamic Classification**: Monitored sensor nodes trigger real-time alarms if telemetry breaches customized safety thresholds:
+  * `Critical`: Triggers automated safety shutdowns or critical warnings (e.g., **NH3 Leak Detected** when Differential Pressure < 4 bar; **High Differential Pressure Auto-Shutdown** when Differential Pressure > 6 bar).
+  * `Warning`: Indicates abnormal electrical or system states (e.g., **Low Battery Voltage Alert** when < 23V; **High Battery Voltage Alert** when > 27V).
+  * `Info`: Standard physical state alterations or user operations.
 * **Operator Handshake**: Requires operators to actively "acknowledge" and input notes on alarms, establishing an immutable regulatory compliance history.
 
-### 4.5 Enterprise Admin Panel
+### 4.5 Enterprise Admin Panel & Multi-Tenant Management
 * **Fleet Control**: Serves as the master dashboard for system operators and administrators.
 * **Pending Approvals Manager**: Restricts newly registered users to restricted "Viewer" privileges until verified, manually authorized, and elevated by a system Administrator.
 * **Audit Logs Viewer**: Streams real-time operational event records, containing complete tracing IDs, origin IPs, and precise timestamps.
+* **Multi-tenant Administration**: Administrators managing multiple clients or facilities can seamlessly switch between tenants using the **Tenant Switcher** dropdown in the dashboard header. A dedicated Admin Landing page provides centralized tenant selection, while the "All Tenants" view offers aggregated cross-tenant analytics. This eliminates the need for separate instances and significantly reduces operational overhead for fleet operators.
 
 ### 4.6 Asset Grid & Search View
 * **Dynamic Fleet Navigation**: A high-density grid showing real-time status cards of all registered generators globally. Features high-performance client-side search, fuzzy filtering, and paginated dynamic loading.
@@ -215,8 +227,9 @@ ThermaCore supports multiple legacy and modern industrial ingestion layers to br
 
 ThermaCore SCADA is built around a rigorous, zero-trust military-grade security model designed to safeguard critical utility assets from sophisticated cyber threats.
 
+**ZERO-TRUST PHYSICAL SECURITY LAYERS**
+
 ```
-                  ZERO-TRUST PHYSICAL SECURITY LAYERS
 ┌────────────────────────────────────────────────────────────────────────┐
 │ LAYER 1: CLIENT ACCESS -> HttpOnly JWT Cookies & Strict CSRF Guard     │
 ├────────────────────────────────────────────────────────────────────────┤
@@ -233,10 +246,11 @@ ThermaCore SCADA is built around a rigorous, zero-trust military-grade security 
 * **Remote Override Authorization**: Adjustments to critical equipment configurations (e.g., initiating emergency coolant flows) require secondary verification codes. These actions generate immutable audit logs that record the operator's timestamp, digital signature, and origin IP.
 
 ### 6.2 Granular Role-Based Access Control (RBAC)
-ThermaCore SCADA defines clear operational boundaries across three specialized tiers:
+ThermaCore SCADA defines clear operational boundaries across four specialized tiers:
 1. **Viewer**: Read-only monitoring of physical metrics. Access is restricted to basic dashboards, status charts, and diagnostic layouts. Viewers are strictly prohibited from modifying configurations, adding units, or interacting with remote commands.
 2. **Operator**: Authorized to perform day-to-day control operations. Operators can acknowledge alerts, toggle secondary valves, and adjust thermal pump thresholds. Operators are restricted from modifying user permissions, creating accounts, or editing system parameters.
-3. **Admin**: Master fleet control. Authorized to register new hardware, approve user accounts, modify database configurations, view deep audit logs, and override critical system safety parameters.
+3. **Client Admin**: Enterprise multi-facility administration scoped to a specific client organization (`client_id`). Client Admins can switch between all facilities under their client organization, register and manage facility units, approve operators/viewers within their organization, and execute remote controls across their facility fleet.
+4. **System Admin**: Master fleet control across all clients and facilities. Authorized to register global hardware, manage client organizations and system admins, modify database configurations, view deep cross-client audit logs, and override critical system safety parameters.
 
 ### 6.3 Web Security Hardening & CSRF/XSS Mitigation
 * **CSRF Mitigation**: Mitigated on the API layer through short-lived JWT tokens coupled with secure, HttpOnly, and SameSite=Strict cookies.
@@ -249,11 +263,12 @@ ThermaCore SCADA defines clear operational boundaries across three specialized t
 
 The reliability and safety of ThermaCore SCADA are continuously verified through an automated, execute-first development lifecycle.
 
+**AUTOMATED CI/CD FLOW**
+
 ```
-                          AUTOMATED CI/CD FLOW
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │  Developer   │ ──► │  Biome/Lint  │ ──► │ Vitest/Unit  │ ──► │ Production   │
-│ Code Commit  │     │ Static Scan  │     │ 3,700+ Tests │     │ Deployment   │
+│ Code Commit  │     │ Static Scan  │     │ 5,504+ Tests │     │ Deployment   │
 └──────────────┘     └──────────────┘     └──────────────┘     └──────────────┘
 ```
 
@@ -283,13 +298,13 @@ Content-Security-Policy:
 
 ### 7.4 Comprehensive Test Coverage Milestones
 Our commitment to software quality and operational reliability is backed by a rigorous, zero-regression test suite. The platform has achieved elite coverage benchmarks across both frontend and backend architectures:
-* **Total Automated Tests**: **3,700+ passing tests** (comprising 377 frontend unit/integration tests and 3,323+ backend tests).
+* **Total Automated Tests**: **5,504 passing tests** (comprising 4,180 frontend unit/integration tests and 1,324 backend tests).
 * **Frontend Test Coverage (Vitest / v8)**:
-  * **Statements**: **97.34%**
-  * **Branches**: **89.57%**
-  * **Functions**: **98.21%**
+  * **Statements**: **91.78%**
+  * **Branches**: **90.92%**
+  * **Functions**: **91.90%**
 * **Backend Test Coverage (Pytest / Cov)**:
-  * **Overall Coverage**: **~90%**
+  * **Overall Coverage**: **85.63%**
 
 ---
 
@@ -329,13 +344,14 @@ The platform leverages an optimized, multi-stage Docker build process:
 
 Our developmental milestones align with scaling operations to support thousands of active physical utility installations globally:
 
+**DEVELOPMENT ROADMAP**
+
 ```
-                            DEVELOPMENT ROADMAP
-  Q3 2026                 Q4 2026                 Q1 2027
-  ┌───────────────────────┐  ┌───────────────────────┐  ┌──────────────────────┐
-  │ Anomaly AI Engine     │  │ Offline-First PWA     │  │ EMQX Enterprise      │
-  │ (Gemini API Integration) │  │ (Local IndexedDB)     │  │ (Hardware HSM)       │
-  └───────────────────────┘  └───────────────────────┘  └──────────────────────┘
+Q3 2026                 Q4 2026                 Q1 2027
+┌───────────────────────┐  ┌───────────────────────┐  ┌──────────────────────┐
+│ Anomaly AI Engine     │  │ Offline-First PWA     │  │ EMQX Enterprise      │
+│ (Gemini API Integration) │  │ (Local IndexedDB)     │  │ (Hardware HSM)       │
+└───────────────────────┘  └───────────────────────┘  └──────────────────────┘
 ```
 
 ### 9.1 Q3 2026: AI-Driven Thermodynamic Anomaly Prediction

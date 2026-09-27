@@ -7,7 +7,7 @@ This user guide provides instructions for navigating and managing ThermaCore mod
 
 ## 1. System Navigation Overview
 
-The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold display. The sidebar contains 5 main navigation areas:
+The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold display. The sidebar contains 6 main navigation areas:
 
 ```
 ┌────────────────────────────────────────────────────────┐
@@ -17,9 +17,12 @@ The ThermaCore SCADA interface features a responsive, high-contrast Navy & Gold 
 │  [▤] Asset Grid          - Unit list & status details │
 │  [⚙] Remote Controls     - Critical override commands │
 │  [📈] Performance & COP   - Historical trends & ROI    │
-│  [🔒] System Admin Panel  - Approvals & audit logs     │
+│  [🔒] Tenant Switcher     - Select active client scope │
+│  [👥] User Management     - Approvals & audit logs     │
 └────────────────────────────────────────────────────────┘
 ```
+
+**Note**: The **Tenant Switcher**, **User Management**, and **Protocol Manager** links are only visible to users with System Administrator privileges. Regular Operators and Viewers do not see or have access to these navigation items or the Multi-Protocol Manager interface.
 
 ---
 
@@ -37,10 +40,14 @@ The main landing page provides an immediate status summary of the generator flee
 
 To view specific modular generator nodes, navigate to the **Asset Grid**:
 * **Fuzzy Search & Filters**: Filter units by status (`Online`, `Warning`, `Critical Outage`, `Maintenance`), region, or ID.
-* **Real-Time Node Cards**: Display individual thermodynamic metrics:
-  * Heat Exchanger Temperatures ($T_{hot}$, $T_{cold}$)
-  * Mass flow rates ($\dot{m}$)
-  * Hydraulic pump status
+* **Real-Time Node Cards & Unit Vitals**: Display standardized thermodynamic and generator metrics:
+  * **AWG Water Level** (%) - Atmospheric Water Generation storage level
+  * **Temp Out - Chill** (°C) - Chilled loop output temperature
+  * **Temp Out - Hot** (°C) - Hot loop output temperature
+  * **Differential Pressure** (bar) - System differential pressure
+  * **Flow Rate Out - Chill** (L/min) - Chilled loop output flow rate
+  * **Flow Rate Out - Hot** (L/min) - Hot loop output flow rate
+  * **Battery Voltage** (V) - DC system battery storage voltage
 * **Adding/Editing Units**: Operators with Administrative clearance can register new units by entering the asset ID, serial number, location coordinates, and local PLC protocol.
 
 ---
@@ -49,26 +56,35 @@ To view specific modular generator nodes, navigate to the **Asset Grid**:
 
 ThermaCore SCADA enables secure, bidirectionally authenticated remote control over the physical generator loops.
 
+**REMOTE SHUTDOWN EXECUTION FLOW**
+
 ```
-                  REMOTE SHUTDOWN EXECUTION FLOW
 ┌───────────────────────┐      ┌───────────────────────┐      ┌───────────────────────┐
-│ Operator clicks       │ ───► │ Enter 2FA Override   │ ───► │ Cryptographic command │
+│ Operator clicks       │ ───► │ Enter 2FA Override    │ ───► │ Cryptographic command │
 │ "Emergency Shutdown"  │      │ Authentication Code   │      │ signed & sent to edge │
 └───────────────────────┘      └───────────────────────┘      └───────────────────────┘
 ```
 
-### Safety Operational Protocols
+### Safety Operational Protocols & Setpoint Controls
 1. **Critical Overrides**: Any override of physical safety loops (e.g., triggering emergency shutdown, adjusting coolant flow limits) must be verified through the control confirmation modal.
-2. **Four-Eyes Principle**: High-impact remote control operations require secondary administrator authorization codes before executing on physical PLC hardware.
-3. **Execution Feedback**: Once dispatched, the platform monitors telemetry for 5 seconds to confirm that the physical actuator has responded (indicated by a state change from `Active` to `Closed`).
+2. **Thermal & AWG Production Setpoints**: Operators and Admins can configure generator production balances using dual setpoint controls:
+   * **Power Production Setpoint (0–100%)**: Controls target thermal power output. Reducing to 0% initiates an automated soft shutdown.
+   * **AWG Water Production Setpoint (0–100%)**: Controls atmospheric water generation rates. Reducing to 0% disables water production loops.
+   * **Operation Modes**: Quick presets for **Balanced (50/50)**, **Power Priority (90/20)**, **AWG Water Priority (30/90)**, or **Custom**.
+3. **Four-Eyes Principle**: High-impact remote control operations require secondary administrator authorization codes before executing on physical PLC hardware.
+4. **Execution Feedback**: Once dispatched, the platform monitors telemetry for 5 seconds to confirm that the physical actuator has responded (indicated by a state change from `Active` to `Closed`).
 
 ---
 
 ## 5. Alerts & Alarm Handshake Management
 
 Alarms are classified dynamically according to threat severities:
-* **Critical (Red)**: Critical mechanical/electrical failures (e.g., pressure leaks, temperature thermal runaway). Action must be taken immediately.
-* **Warning (Yellow)**: Non-lethal thermodynamic deviations (e.g., flow rate dropping slightly).
+* **Critical (Red)**: Critical mechanical/electrical failures. Key automated safety thresholds include:
+  * **NH3 Leak Detected**: Triggered when **Differential Pressure < 4 bar** (indicates toxic ammonia coolant leak requiring immediate system isolation).
+  * **High Differential Pressure Auto-Shutdown**: Triggered when **Differential Pressure > 6 bar** (initiates automatic safety shutdown).
+* **Warning (Yellow)**: Non-lethal thermodynamic deviations or power storage alerts:
+  * **Low Battery Voltage Alert**: Triggered when **Battery Voltage < 23V**.
+  * **High Battery Voltage Alert**: Triggered when **Battery Voltage > 27V**.
 * **Info (Blue)**: Routine operational changes (e.g., user logged in, maintenance bypass engaged).
 
 ### Alarm Acknowledgment Handshake
@@ -80,12 +96,18 @@ Alarms are classified dynamically according to threat severities:
 
 ## 6. Enterprise Admin & Permission Panel
 
-Administrators possess master fleet supervisory privileges:
-* **New User Approvals**: All self-registered users are assigned read-only "Viewer" status by default. Admins must explicitly authorize and promote new users.
-* **Audit Trail Reviews**: Accesses a real-time event list tracking system activities, containing:
-  * Tracing IDs and IP Addresses
-  * Action names (e.g., `User Elevated`, `Emergency Command Sent`)
-  * Target asset IDs
+The platform supports a 4-tier Role-Based Access Control (RBAC) hierarchy:
+* **System Administrator (`admin`)**: Master fleet supervisory privileges with cross-tenant capability across all clients and facilities. Can manage system settings, all users, and global infrastructure.
+* **Client Administrator (`client_admin`)**: Client-level administrator with administrative access to all facilities and units belonging to their specific Client organization (`client_id`). Can switch between client facilities, manage client-specific users (operators, viewers), configure facility units, and execute remote commands.
+* **Operator (`operator`)**: Power user with remote control capabilities and unit status management restricted to assigned facilities.
+* **Viewer (`viewer`)**: Read-only telemetry access for assigned facilities.
+
+### Client Admin Capabilities
+* **Client Facility Switcher**: Client Admins can switch view context across all facilities (`tenants`) belonging to their Client organization. Only facilities matching the user's `client_id` are displayed.
+* **Tenant Filtering**: Client Admins automatically see only tenants that belong to their organization (`client_id`). The "All Tenants" option for Client Admins means "All tenants within my client organization" - not all tenants across the entire platform.
+* **User Management**: Client Admins can invite, approve, and manage Operators and Viewers assigned to their client's facilities.
+* **Facility & Asset Administration**: Register and edit modular generator nodes and local PLCs within client facilities.
+* **Audit Trail Reviews**: Access audit logs filtered to events occurring within their client organization.
 
 ---
 
@@ -104,3 +126,62 @@ For on-site engineers, the **Engineering View** displays a live Process Flow Dia
 * **Dynamic Pipe Overlays**: Overlays animate color and speed representing liquid fluid flow velocities.
 * **Interactive Sensor Hubs**: Hovering over pipe junctions opens high-resolution tooltips detailing real-time fluid properties and sensor health diagnostics.
 * **Protocol Indicators**: Live protocol lights confirm the health of the physical ingest path (`MQTT`, `OPC-UA`, `Modbus-TCP`, `DNP3`).
+
+---
+
+## 9. Multi-Tenant Administration & Context Selection
+
+ThermaCore SCADA supports fully isolated multi-tenant operations to enable service providers to manage multiple customer fleets from a single system.
+
+### 9.1 Admin Landing Page (`/admin`)
+
+Administrative accounts land on the dedicated **Admin Landing** page at `/admin` immediately after login. This page:
+* Displays a welcome message and the ThermaCore logo
+* Lists all available tenants in a dropdown selector
+* Includes a "Go to Dashboard" button that activates once a tenant is selected
+* Provides an **"All Tenants"** option to view aggregated data across all fleets
+
+This is a deliberate security barrier to ensure all subsequent actions are safely isolated to the correct customer account. The selected tenant context is stored in `sessionStorage` and persists throughout the active session.
+
+### 9.2 Real-Time Tenant Switching
+
+While viewing the main dashboard, administrators can switch their focused tenant at any time using the **Tenant Switcher** dropdown located in the dashboard header:
+* The dropdown displays all available tenants plus the **"All Tenants"** option
+* Selecting a new tenant updates the dashboard view instantly
+* Unit lists, telemetry data, and metrics automatically refresh to reflect the selected tenant's scope
+* No full system logout or login is required — switching happens seamlessly
+
+**Tenant View Behavior:**
+
+| Selection | Behavior |
+| :--- | :--- |
+| **Specific Tenant** | Shows only units belonging to that tenant (typically 6 units per tenant) |
+| **"All Tenants"** | Shows all units across every tenant (all 20 units in the fleet) |
+
+### 9.3 Returning to Admin Landing
+
+Administrators can return to the tenant selection page at any time by:
+* Clicking the **Tenant Switcher** menu item (Shield icon) in the left sidebar
+* The navigation redirects to `/admin` where a new tenant can be selected
+
+### 9.4 Tenant Context Persistence
+
+The active tenant selection is preserved using `sessionStorage`:
+* The `tenant_selected` flag persists throughout the active browser session
+* Refreshing the page maintains the current tenant context
+* **Cleared automatically**:
+  * When the user logs out
+  * When a new login occurs (ensures admins always see the landing page on fresh login)
+  * When the browser tab is closed
+
+### 9.5 Non-Admin User Experience
+
+Regular Operators and Viewers (non-admin users):
+* Do not see the Tenant Switcher in the dashboard header
+* Do not have access to the `/admin` landing page
+* Are always scoped to their assigned single tenant
+* Cannot switch tenants or view "All Tenants" data
+
+---
+
+*End of Operator Manual*

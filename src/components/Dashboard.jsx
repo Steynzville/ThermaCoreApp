@@ -9,11 +9,13 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import { units } from "../data/mockUnits";
+import { useTenant } from "../context/TenantContext";
+import { useUnits } from "../context/UnitContext";
+import TenantSwitcher from "./admin/TenantSwitcher";
 import EnhancedStatusDial from "./Dashboard/EnhancedStatusDial";
 import QuickActionCard from "./Dashboard/QuickActionCard";
 import UnitSummary from "./Dashboard/UnitSummary";
@@ -24,12 +26,49 @@ import HighTechToggle from "./ui/HighTechToggle";
 // Enhanced Dashboard Component
 const Dashboard = ({ className }) => {
   const navigate = useNavigate();
-  const { userRole } = useAuth();
-  const [_searchQuery, _setSearchQuery] = useState("");
+  const location = useLocation();
+  const { user, userRole } = useAuth();
+  const { currentTenant, canSwitchTenants } = useTenant();
+  const { units, loading, error } = useUnits();
   const [currentView, setCurrentView] = useState("operator"); // "operator" or "performance"
 
-  // Filter units based on user role - User role only sees first 5 units
-  const filteredUnits = userRole === "user" ? units.slice(0, 6) : units;
+  // Single source of truth for admin status - derived from AuthContext
+  const isAdminUser = userRole === "admin" || user?.role === "admin";
+
+  // Check if admin has made a selection (sessionStorage or query param fallback)
+  const hasSelectedTenant = () => {
+    if (sessionStorage.getItem("tenant_selected") === "true") {
+      return true;
+    }
+    const params = new URLSearchParams(location.search);
+    return params.get("tenant_selected") === "true";
+  };
+
+  // If user can switch tenants and hasn't selected one, redirect to admin landing
+  useEffect(() => {
+    if (canSwitchTenants && !hasSelectedTenant()) {
+      navigate("/admin", { replace: true });
+    }
+  }, [canSwitchTenants, navigate, location.search]);
+
+  // Show loading or nothing while redirecting
+  if (canSwitchTenants && !hasSelectedTenant()) {
+    return null;
+  }
+
+  const filteredUnits = units;
+  if (loading)
+    return (
+      <p className="p-6" role="status">
+        Loading portfolio...
+      </p>
+    );
+  if (error)
+    return (
+      <p className="p-6" role="alert">
+        {error}
+      </p>
+    );
 
   // Dynamic data calculations from filtered units
   const totalUnits = filteredUnits.length;
@@ -43,12 +82,12 @@ const Dashboard = ({ className }) => {
     (unit) => unit.status === "maintenance",
   ).length;
   const unitsWithAlerts = filteredUnits.filter((unit) => unit.hasAlert).length;
-
-  // For alarms, we'll use hasAlarm property
   const alarmUnits = filteredUnits.filter((unit) => unit.hasAlarm).length;
 
-  // Count alerts from AlertsView - should match the actual alerts displayed
-  const _alertCount = unitsWithAlerts; // Dynamic count based on units with alerts
+  // Guard against division by zero
+  const safePercentage = (value) => {
+    return totalUnits ? Math.round((value / totalUnits) * 100) : 0;
+  };
 
   const handleDialClick = (status) => {
     navigate(`/grid-view?status=${status}`);
@@ -85,7 +124,6 @@ const Dashboard = ({ className }) => {
         className={`min-h-screen bg-blue-50 dark:bg-gray-950 p-3 lg:p-4 xl:p-6 ${className}`}
       >
         <div className="max-w-7xl mx-auto">
-          {/* Toggle above header */}
           <div className="mb-6">
             <HighTechToggle
               isPerformance={currentView === "performance"}
@@ -94,20 +132,27 @@ const Dashboard = ({ className }) => {
             />
           </div>
 
-          {/* Performance Dashboard Content */}
           <div className="mb-6 lg:mb-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6 gap-4">
               <div>
                 <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                   Performance Dashboard
                 </h1>
                 <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-                  Monitor power generation, efficiency, and environmental impact
+                  {canSwitchTenants && currentTenant
+                    ? `Managing: ${currentTenant.name}`
+                    : canSwitchTenants && !currentTenant
+                      ? "Managing: All Tenants"
+                      : "Monitor power generation, efficiency, and environmental impact"}
                 </p>
               </div>
+              {canSwitchTenants && (
+                <div className="mt-4 md:mt-0">
+                  <TenantSwitcher />
+                </div>
+              )}
             </div>
 
-            {/* Breadcrumb */}
             <nav className="text-sm text-gray-600 dark:text-gray-400">
               <span className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer">
                 Home
@@ -119,7 +164,6 @@ const Dashboard = ({ className }) => {
             </nav>
           </div>
 
-          {/* Include the rest of PerformanceDashboard content without the header */}
           <PerformanceDashboard className="" hideHeader={true} />
         </div>
       </div>
@@ -142,26 +186,38 @@ const Dashboard = ({ className }) => {
 
         {/* Enhanced Header - Optimized for laptop screens */}
         <div className="mb-6 lg:mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6">
+          {/* Main header row with title and tenant switcher */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 lg:mb-6 gap-4">
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
                 Dashboard Overview
               </h1>
               <p className="text-sm lg:text-base text-gray-600 dark:text-gray-400">
-                Monitor your ThermaCore units in real-time
+                {canSwitchTenants && currentTenant
+                  ? `Managing: ${currentTenant.name}`
+                  : canSwitchTenants && !currentTenant
+                    ? "Managing: All Tenants"
+                    : `Welcome back, ${user?.firstName || user?.name || "User"}`}
               </p>
             </div>
-            <NotificationBell className="mt-4 md:mt-0" />
+            <div className="flex items-center gap-4 mt-4 md:mt-0">
+              {canSwitchTenants && <TenantSwitcher />}
+            </div>
           </div>
 
-          {/* Breadcrumb */}
-          <nav className="text-sm text-gray-600 dark:text-gray-400">
-            <span className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer">
-              Home
-            </span>
-            <span className="mx-2">/</span>
-            <span className="text-gray-900 dark:text-gray-100">Dashboard</span>
-          </nav>
+          {/* ✅ NotificationBell - placed in its own row with proper positioning */}
+          <div className="flex justify-between items-center">
+            <nav className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer">
+                Home
+              </span>
+              <span className="mx-2">/</span>
+              <span className="text-gray-900 dark:text-gray-100">
+                Dashboard
+              </span>
+            </nav>
+            <NotificationBell />
+          </div>
         </div>
 
         {/* Mobile Unit Summary - Only visible on small screens */}
@@ -171,7 +227,7 @@ const Dashboard = ({ className }) => {
             onlineCount={onlineUnits}
             offlineCount={offlineUnits}
             maintenanceCount={maintenanceUnits}
-            alertCount={6}
+            alertCount={unitsWithAlerts}
             alarmCount={alarmUnits}
           />
         </div>
@@ -193,7 +249,7 @@ const Dashboard = ({ className }) => {
             icon={Wifi}
             title="Online"
             count={onlineUnits}
-            percentage={Math.round((onlineUnits / totalUnits) * 100)}
+            percentage={safePercentage(onlineUnits)}
             color="green"
             onClick={() => handleDialClick("online")}
             clickable={true}
@@ -204,7 +260,7 @@ const Dashboard = ({ className }) => {
             icon={WifiOff}
             title="Offline"
             count={offlineUnits}
-            percentage={Math.round((offlineUnits / totalUnits) * 100)}
+            percentage={safePercentage(offlineUnits)}
             color="black"
             onClick={() => handleDialClick("offline")}
             clickable={true}
@@ -215,7 +271,7 @@ const Dashboard = ({ className }) => {
             icon={Wrench}
             title="Maintenance"
             count={maintenanceUnits}
-            percentage={Math.round((maintenanceUnits / totalUnits) * 100)}
+            percentage={safePercentage(maintenanceUnits)}
             color="yellow"
             onClick={() => handleDialClick("maintenance")}
             clickable={true}
@@ -226,7 +282,7 @@ const Dashboard = ({ className }) => {
             icon={AlertTriangle}
             title="Alerts"
             count={unitsWithAlerts}
-            percentage={Math.round((unitsWithAlerts / totalUnits) * 100)}
+            percentage={safePercentage(unitsWithAlerts)}
             color="orange"
             onClick={handleAlertsClick}
             clickable={true}
@@ -237,7 +293,7 @@ const Dashboard = ({ className }) => {
             icon={Zap}
             title="Alarms"
             count={alarmUnits}
-            percentage={Math.round((alarmUnits / totalUnits) * 100)}
+            percentage={safePercentage(alarmUnits)}
             color="red"
             onClick={handleAlarmsClick}
             clickable={true}
@@ -246,7 +302,7 @@ const Dashboard = ({ className }) => {
         </div>
 
         {/* Quick Actions - Only show for Admin */}
-        {userRole === "admin" && (
+        {isAdminUser && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
               Quick Actions

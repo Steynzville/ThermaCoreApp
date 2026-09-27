@@ -1,234 +1,301 @@
 """Tests for user management routes."""
 
-from unittest.mock import MagicMock, patch
-
-from sqlalchemy.exc import IntegrityError
-
 
 def test_get_users_list(client, admin_token):
     """Test get_users with pagination and filters."""
     headers = {"Authorization": f"Bearer {admin_token}"}
 
-    # Mock paginate and query
-    with (
-        patch("app.models.User.query"),
-        patch("app.routes.users.tenant_filter") as mock_tenant_filter,
-    ):
-        mock_pagination = MagicMock()
-        mock_pagination.items = []
-        mock_pagination.total = 0
-        mock_pagination.pages = 0
-        mock_pagination.has_next = False
-        mock_pagination.has_prev = False
+    # 1. Simple get - should succeed
+    response = client.get("/api/v1/users", headers=headers)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "data" in data
 
-        mock_tenant_filter.return_value.paginate.return_value = mock_pagination
-
-        # 1. Simple get
-        response = client.get("/api/v1/users", headers=headers)
-        assert response.status_code in [200, 500]
-        data = response.get_json()
-        assert "data" in data
-        assert data["total"] == 0
-
-        # 2. Search with special characters and filtering
-        response = client.get(
-            "/api/v1/users?search=test%40%23%24&role=admin&active=true&company=TestCorp",
-            headers=headers,
-        )
-        assert response.status_code in [200, 500]
+    # 2. Search with special characters and filtering
+    response = client.get(
+        "/api/v1/users?search=test%40%23%24&role=admin&active=true&company=TestCorp",
+        headers=headers,
+    )
+    assert response.status_code == 200
 
 
-def test_get_user_by_id(client, admin_token):
+def test_get_user_by_id(client, admin_token, db_session):
     """Test getting single user by id (success and 404)."""
     headers = {"Authorization": f"Bearer {admin_token}"}
+    from app.models import Role, User
 
-    with patch("app.models.User.query") as mock_query:
-        # Success
-        mock_user = MagicMock()
-        mock_user.id = 123
-        mock_query.get_or_404.return_value = mock_user
+    viewer_role = Role.query.filter_by(name="viewer").first()
+    target = User(
+        username="get_by_id_target",
+        email="get_by_id_target@test.com",
+        role_id=viewer_role.id,
+        is_active=True,
+        registration_status="approved",
+    )
+    target.set_password("password123")
+    db_session.add(target)
+    db_session.commit()
 
-        response = client.get("/api/v1/users/123", headers=headers)
-        assert response.status_code in [200, 500]
+    # Success
+    response = client.get(f"/api/v1/users/{target.id}", headers=headers)
+    assert response.status_code == 200
+    assert response.get_json()["username"] == "get_by_id_target"
 
-        # 404 not found handled by Flask-SQLAlchemy abort / get_or_404
-        from werkzeug.exceptions import NotFound
-
-        mock_query.get_or_404.side_effect = NotFound()
-        response = client.get("/api/v1/users/999", headers=headers)
-        assert response.status_code == 404
+    # 404 not found
+    response = client.get("/api/v1/users/999999", headers=headers)
+    assert response.status_code == 404
 
 
-def test_update_user_scenarios(client, admin_token):
+def test_update_user_scenarios(client, admin_token, db_session):
     """Test updating user including duplicate usernames/emails (IntegrityError), special chars."""
     headers = {"Authorization": f"Bearer {admin_token}"}
+    from app.models import Role, User
 
-    with (
-        patch("app.models.User.query") as mock_user_query,
-        patch("app.models.Role.query") as mock_role_query,
-        patch("app.routes.users.get_current_user_id", return_value=(1, True)),
-        patch("app.models.db.session.commit") as mock_commit,
-    ):
-        mock_user = MagicMock()
-        mock_user.id = 2  # user being edited is ID 2 (not current user 1)
-        mock_user_query.get_or_404.return_value = mock_user
+    viewer_role = Role.query.filter_by(name="viewer").first()
+    operator_role = Role.query.filter_by(name="operator").first()
 
-        mock_role = MagicMock()
-        mock_role_query.get.return_value = mock_role
+    target = User(
+        username="update_scenarios_target",
+        email="update_scenarios_target@test.com",
+        role_id=viewer_role.id,
+        is_active=True,
+        registration_status="approved",
+    )
+    target.set_password("password123")
+    db_session.add(target)
+    db_session.commit()
 
-        # 1. Normal success update
-        payload = {
-            "first_name": "John",
-            "last_name": "Doe",
-            "company": "Company!@#$",  # special characters in payload
-            "role_id": 2,
-        }
-        response = client.put("/api/v1/users/2", json=payload, headers=headers)
-        assert response.status_code in [200, 500]
+    # 1. Normal success update
+    payload = {
+        "first_name": "John",
+        "last_name": "Doe",
+        "company": "Company!@#$",
+        "role_id": operator_role.id,
+    }
+    response = client.put(f"/api/v1/users/{target.id}", json=payload, headers=headers)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["first_name"] == "John"
+    assert data["last_name"] == "Doe"
+    assert data["company"] == "Company!@#$"
 
-        # 2. Validation error (invalid fields)
-        response = client.put(
-            "/api/v1/users/2",
-            json={"email": "not-an-email"},
-            headers=headers,
-        )
-        assert response.status_code == 400
+    # 2. Validation error (invalid fields)
+    response = client.put(
+        f"/api/v1/users/{target.id}",
+        json={"email": "not-an-email"},
+        headers=headers,
+    )
+    assert response.status_code == 400
 
-        # 3. Modify own role (Forbidden/Forbidden 403)
-        with patch("app.routes.users.get_current_user_id", return_value=(2, True)):
-            response = client.put(
-                "/api/v1/users/2",
-                json={"role_id": 1},
-                headers=headers,
-            )
-            assert response.status_code == 403
+    # 3. Modify own role (Forbidden)
+    admin_user = User.query.filter_by(username="admin").first()
+    response = client.put(
+        f"/api/v1/users/{admin_user.id}",
+        json={"role_id": viewer_role.id},
+        headers=headers,
+    )
+    assert response.status_code == 403
+    assert "Cannot modify your own role" in response.get_json()["error"]
 
-        # 4. Duplicate username conflict (IntegrityError)
-        class FakeOrig:
-            def __str__(self):
-                return "duplicate key value violates unique constraint on username"
+    # 4. Duplicate username conflict (IntegrityError)
+    other_user = User(
+        username="existing_username_conflict",
+        email="existing_conflict@test.com",
+        role_id=viewer_role.id,
+        is_active=True,
+        registration_status="approved",
+    )
+    other_user.set_password("password123")
+    db_session.add(other_user)
+    db_session.commit()
 
-        mock_commit.side_effect = IntegrityError("statement", "params", FakeOrig())
-        response = client.put(
-            "/api/v1/users/2",
-            json={"first_name": "DupUser"},
-            headers=headers,
-        )
-        assert response.status_code == 409
-        assert "Username already exists" in response.get_json()["error"]
+    response = client.put(
+        f"/api/v1/users/{target.id}",
+        json={"username": "existing_username_conflict"},
+        headers=headers,
+    )
+    assert response.status_code == 409
+    assert "Username already exists" in response.get_json()["error"]
 
-        # 5. Duplicate email conflict (IntegrityError)
-        class FakeOrigEmail:
-            def __str__(self):
-                return "duplicate key value violates unique constraint on email"
-
-        mock_commit.side_effect = IntegrityError("statement", "params", FakeOrigEmail())
-        response = client.put(
-            "/api/v1/users/2",
-            json={"first_name": "DupEmail"},
-            headers=headers,
-        )
-        assert response.status_code == 409
-        assert "Email already exists" in response.get_json()["error"]
+    # 5. Duplicate email conflict (IntegrityError)
+    response = client.put(
+        f"/api/v1/users/{target.id}",
+        json={"email": "existing_conflict@test.com"},
+        headers=headers,
+    )
+    assert response.status_code == 409
+    assert "Email already exists" in response.get_json()["error"]
 
 
-def test_delete_and_status_endpoints(client, admin_token):
+def test_delete_and_status_endpoints(client, admin_token, db_session):
     """Test delete_user, activate_user, deactivate_user."""
     headers = {"Authorization": f"Bearer {admin_token}"}
+    from app.models import Role, User
 
-    with (
-        patch("app.models.User.query") as mock_user_query,
-        patch("app.routes.users.get_current_user_id", return_value=(1, True)),
-        patch("app.models.db.session.delete"),
-        patch("app.models.db.session.commit"),
-    ):
-        mock_user = MagicMock()
-        mock_user.id = 5
-        mock_user_query.get_or_404.return_value = mock_user
+    viewer_role = Role.query.filter_by(name="viewer").first()
+    target = User(
+        username="delete_status_target",
+        email="delete_status_target@test.com",
+        role_id=viewer_role.id,
+        is_active=True,
+        registration_status="approved",
+    )
+    target.set_password("password123")
+    db_session.add(target)
+    db_session.commit()
+    target_id = target.id
 
-        # Deactivate
-        response = client.patch("/api/v1/users/5/deactivate", headers=headers)
-        assert response.status_code in [200, 500]
-        assert mock_user.is_active is False
+    # Deactivate
+    response = client.patch(f"/api/v1/users/{target_id}/deactivate", headers=headers)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["is_active"] is False
 
-        # Activate
-        response = client.patch("/api/v1/users/5/activate", headers=headers)
-        assert response.status_code in [200, 500]
-        assert mock_user.is_active is True
+    # Activate
+    response = client.patch(f"/api/v1/users/{target_id}/activate", headers=headers)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["is_active"] is True
 
-        # Delete own account (forbidden)
-        with patch("app.routes.users.get_current_user_id", return_value=(5, True)):
-            response = client.delete("/api/v1/users/5", headers=headers)
-            assert response.status_code == 403
+    # Delete own account (forbidden)
+    admin_user = User.query.filter_by(username="admin").first()
+    response = client.delete(f"/api/v1/users/{admin_user.id}", headers=headers)
+    assert response.status_code == 403
+    assert "Cannot delete your own account" in response.get_json()["error"]
 
-        # Delete success
-        response = client.delete("/api/v1/users/5", headers=headers)
-        assert response.status_code == 204
+    # Delete success
+    response = client.delete(f"/api/v1/users/{target_id}", headers=headers)
+    assert response.status_code == 204
 
 
-def test_batch_activation_endpoints(client, admin_token):
+def test_batch_activation_endpoints(client, admin_token, db_session):
     """Test batch activate/deactivate with list of user ids."""
     headers = {"Authorization": f"Bearer {admin_token}"}
+    from app.models import Role, User
 
-    with (
-        patch("app.models.User.query") as mock_user_query,
-        patch("app.models.db.session.commit"),
-    ):
-        mock_user = MagicMock()
-        mock_user_query.filter.return_value.all.return_value = [mock_user]
-
-        # Batch activate
-        response = client.post(
-            "/api/v1/users/batch/activate",
-            json={"user_ids": [1, 2, 3]},
-            headers=headers,
+    viewer_role = Role.query.filter_by(name="viewer").first()
+    users = []
+    for i in range(3):
+        user = User(
+            username=f"batch_test_user_{i}",
+            email=f"batch_test_user_{i}@test.com",
+            role_id=viewer_role.id,
+            is_active=True if i % 2 == 0 else False,
+            registration_status="approved",
         )
-        assert response.status_code == 200
-        if response.status_code == 200:
-            assert response.get_json().get("activated_count", 0) >= 0
+        user.set_password("password123")
+        db_session.add(user)
+        users.append(user)
+    db_session.commit()
 
-        # Batch deactivate
-        response = client.post(
-            "/api/v1/users/batch/deactivate",
-            json={"user_ids": [1, 2, 3]},
-            headers=headers,
-        )
-        assert response.status_code in [200, 500]
-        if response.status_code == 200:
-            assert response.get_json().get("deactivated_count", 0) >= 0
+    user_ids = [u.id for u in users]
+
+    # Batch deactivate
+    response = client.post(
+        "/api/v1/users/batch/deactivate",
+        json={"user_ids": user_ids},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "deactivated" in data["message"].lower()
+
+    # Verify users are deactivated
+    for user in users:
+        db_session.refresh(user)
+        assert user.is_active is False
+
+    # Batch activate
+    response = client.post(
+        "/api/v1/users/batch/activate",
+        json={"user_ids": user_ids},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "activated" in data["message"].lower()
+
+    # Verify users are activated
+    for user in users:
+        db_session.refresh(user)
+        assert user.is_active is True
+
+    # Test invalid request - missing user_ids
+    response = client.post(
+        "/api/v1/users/batch/activate",
+        json={},
+        headers=headers,
+    )
+    assert response.status_code == 400
+    assert "user_ids required" in response.get_json()["error"]
+
+    # Test empty list
+    response = client.post(
+        "/api/v1/users/batch/activate",
+        json={"user_ids": []},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "0 users activated" in data["message"]
 
 
-def test_approve_reject_workflow(client, admin_token):
+def test_approve_reject_workflow(client, admin_token, db_session):
     """Test approval and rejection endpoints for users registration."""
     headers = {"Authorization": f"Bearer {admin_token}"}
+    from app.models import Role, User
 
-    with (
-        patch("app.models.User.query") as mock_user_query,
-        patch("app.models.db.session.commit"),
-    ):
-        mock_user = MagicMock()
-        mock_user_query.get_or_404.return_value = mock_user
+    viewer_role = Role.query.filter_by(name="viewer").first()
 
-        # Approve
-        response = client.post("/api/v1/users/4/approve", headers=headers)
-        assert response.status_code in [200, 400]
-        if response.status_code == 200:
-            assert mock_user.approval_status == "approved"
+    # Approve
+    pending_for_approve = User(
+        username="workflow_approve_target",
+        email="workflow_approve_target@test.com",
+        role_id=viewer_role.id,
+        registration_status="pending",
+        is_active=True,
+    )
+    pending_for_approve.set_password("password123")
+    db_session.add(pending_for_approve)
+    db_session.commit()
 
-        # Reject
-        response = client.post(
-            "/api/v1/users/4/reject",
-            json={"reason": "Incomplete profile"},
-            headers=headers,
-        )
-        assert response.status_code in [200, 400]
-        if response.status_code == 200:
-            assert mock_user.approval_status == "rejected"
+    response = client.post(
+        f"/api/v1/users/{pending_for_approve.id}/approve",
+        headers=headers,
+    )
+    assert response.status_code == 200
+    db_session.refresh(pending_for_approve)
+    assert pending_for_approve.registration_status == "approved"
+    assert pending_for_approve.approval_date is not None
+    assert pending_for_approve.permissions is not None
+
+    # Reject
+    pending_for_reject = User(
+        username="workflow_reject_target",
+        email="workflow_reject_target@test.com",
+        role_id=viewer_role.id,
+        registration_status="pending",
+        is_active=True,
+    )
+    pending_for_reject.set_password("password123")
+    db_session.add(pending_for_reject)
+    db_session.commit()
+
+    response = client.post(
+        f"/api/v1/users/{pending_for_reject.id}/reject",
+        json={"reason": "Incomplete profile"},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    db_session.refresh(pending_for_reject)
+    assert pending_for_reject.registration_status == "rejected"
+    assert pending_for_reject.rejection_reason == "Incomplete profile"
 
 
 # ============================================================
 # CLIENT ADMIN SCOPING TESTS
 # ============================================================
+
 
 class TestClientAdminScoping:
     """Test client_admin users are correctly scoped to their own client."""
@@ -245,7 +312,11 @@ class TestClientAdminScoping:
         for user in data["data"]:
             assert user.get("client_id") == own_client_id
 
-    def test_get_users_no_client_assigned_returns_empty(self, client, client_admin_no_client_token):
+    def test_get_users_no_client_assigned_returns_empty(
+        self,
+        client,
+        client_admin_no_client_token,
+    ):
         response = client.get(
             "/api/v1/users",
             headers={"Authorization": f"Bearer {client_admin_no_client_token}"},
@@ -253,11 +324,17 @@ class TestClientAdminScoping:
         assert response.status_code == 200
         assert response.get_json()["total"] == 0
 
-    def test_get_pending_users_scoped_to_client(self, client, client_admin_token, db_session):
+    def test_get_pending_users_scoped_to_client(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         token, own_client_id = client_admin_token
 
         # Create a pending user in the same client
         from app.models import Role, User
+
         viewer_role = Role.query.filter_by(name="viewer").first()
         pending_user = User(
             username="pending_scoped",
@@ -279,7 +356,11 @@ class TestClientAdminScoping:
         data = response.get_json()
         assert any(u["username"] == "pending_scoped" for u in data["data"])
 
-    def test_get_pending_users_no_client_assigned_returns_empty(self, client, client_admin_no_client_token):
+    def test_get_pending_users_no_client_assigned_returns_empty(
+        self,
+        client,
+        client_admin_no_client_token,
+    ):
         response = client.get(
             "/api/v1/users/pending",
             headers={"Authorization": f"Bearer {client_admin_no_client_token}"},
@@ -287,11 +368,18 @@ class TestClientAdminScoping:
         assert response.status_code == 200
         assert response.get_json()["total"] == 0
 
-    def test_get_user_outside_client_returns_404(self, client, client_admin_token, admin_token, db_session):
+    def test_get_user_outside_client_returns_404(
+        self,
+        client,
+        client_admin_token,
+        admin_token,
+        db_session,
+    ):
         token, own_client_id = client_admin_token
 
         # Create a user in a different client using admin token
-        from app.models import Role, Client, User
+        from app.models import Client, Role, User
+
         viewer_role = Role.query.filter_by(name="viewer").first()
         other_client = Client(name="OtherClient")
         db_session.add(other_client)
@@ -315,11 +403,17 @@ class TestClientAdminScoping:
         )
         assert response.status_code == 404
 
-    def test_update_user_outside_client_returns_404(self, client, client_admin_token, db_session):
+    def test_update_user_outside_client_returns_404(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         token, own_client_id = client_admin_token
 
         # Create a user outside the client
-        from app.models import Role, Client, User
+        from app.models import Client, Role, User
+
         viewer_role = Role.query.filter_by(name="viewer").first()
         other_client = Client(name="OtherClient2")
         db_session.add(other_client)
@@ -344,8 +438,14 @@ class TestClientAdminScoping:
         )
         assert response.status_code == 404
 
-    def test_client_admin_cannot_assign_admin_role(self, client, client_admin_token, db_session):
+    def test_client_admin_cannot_assign_admin_role(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         from app.models import Role, User
+
         token, own_client_id = client_admin_token
 
         # Create a user in the client's scope
@@ -372,8 +472,14 @@ class TestClientAdminScoping:
         assert response.status_code == 403
         assert "Cannot assign this role" in response.get_json()["error"]
 
-    def test_client_admin_can_assign_viewer_role(self, client, client_admin_token, db_session):
+    def test_client_admin_can_assign_viewer_role(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         from app.models import Role, User
+
         token, own_client_id = client_admin_token
 
         viewer_role = Role.query.filter_by(name="viewer").first()
@@ -396,8 +502,14 @@ class TestClientAdminScoping:
         )
         assert response.status_code == 200
 
-    def test_client_admin_cannot_unassign_client(self, client, client_admin_token, db_session):
+    def test_client_admin_cannot_unassign_client(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         from app.models import Role, User
+
         token, own_client_id = client_admin_token
 
         viewer_role = Role.query.filter_by(name="viewer").first()
@@ -421,8 +533,14 @@ class TestClientAdminScoping:
         assert response.status_code == 403
         assert "Cannot unassign a user's client" in response.get_json()["error"]
 
-    def test_client_admin_cannot_move_user_to_other_client(self, client, client_admin_token, db_session):
+    def test_client_admin_cannot_move_user_to_other_client(
+        self,
+        client,
+        client_admin_token,
+        db_session,
+    ):
         from app.models import Role, User
+
         token, own_client_id = client_admin_token
 
         viewer_role = Role.query.filter_by(name="viewer").first()
@@ -444,7 +562,9 @@ class TestClientAdminScoping:
             headers={"Authorization": f"Bearer {token}"},
         )
         assert response.status_code == 403
-        assert "Cannot assign users to a different client" in response.get_json()["error"]
+        assert (
+            "Cannot assign users to a different client" in response.get_json()["error"]
+        )
 
     def test_batch_activate_filters_out_of_scope_ids(self, client, client_admin_token):
         token, _ = client_admin_token
@@ -457,7 +577,11 @@ class TestClientAdminScoping:
         assert response.status_code == 403
         assert "No valid users found in your client" in response.get_json()["error"]
 
-    def test_batch_activate_no_client_assigned(self, client, client_admin_no_client_token):
+    def test_batch_activate_no_client_assigned(
+        self,
+        client,
+        client_admin_no_client_token,
+    ):
         response = client.post(
             "/api/v1/users/batch/activate",
             json={"user_ids": [1, 2]},
@@ -466,7 +590,11 @@ class TestClientAdminScoping:
         assert response.status_code == 403
         assert "No client assigned" in response.get_json()["error"]
 
-    def test_batch_deactivate_no_client_assigned(self, client, client_admin_no_client_token):
+    def test_batch_deactivate_no_client_assigned(
+        self,
+        client,
+        client_admin_no_client_token,
+    ):
         response = client.post(
             "/api/v1/users/batch/deactivate",
             json={"user_ids": [1, 2]},
@@ -506,7 +634,11 @@ class TestClientAdminScoping:
         assert "total_users" in data
         assert "active_users" in data
 
-    def test_users_stats_empty_when_no_client(self, client, client_admin_no_client_token):
+    def test_users_stats_empty_when_no_client(
+        self,
+        client,
+        client_admin_no_client_token,
+    ):
         response = client.get(
             "/api/v1/users/stats",
             headers={"Authorization": f"Bearer {client_admin_no_client_token}"},
@@ -542,7 +674,11 @@ class TestClientAdminScoping:
         assert response.status_code == 200
         assert "stats" in response.get_json()
 
-    def test_company_stats_empty_when_no_client(self, client, client_admin_no_client_token):
+    def test_company_stats_empty_when_no_client(
+        self,
+        client,
+        client_admin_no_client_token,
+    ):
         response = client.get(
             "/api/v1/users/companies/stats",
             headers={"Authorization": f"Bearer {client_admin_no_client_token}"},
@@ -554,6 +690,7 @@ class TestClientAdminScoping:
 # ============================================================
 # UNTESTED ENDPOINT TESTS
 # ============================================================
+
 
 def test_get_roles(client, admin_token):
     """Get roles endpoint."""
@@ -572,6 +709,7 @@ def test_reset_user_password_success(client, admin_token, db_session):
     target = User.query.filter(User.username != "admin").first()
     if not target:
         from app.models import Role
+
         admin_role = Role.query.filter_by(name="admin").first()
         target = User(
             username="password_reset_target",
@@ -746,7 +884,7 @@ def test_reject_pending_user_default_reason(client, admin_token, db_session):
 
     response = client.post(
         f"/api/v1/users/{pending_user.id}/reject",
-        json={},  # Empty JSON body forces correct Content-Type
+        json={},
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 200
@@ -766,3 +904,39 @@ def test_approve_reject_nonexistent_user(client, admin_token):
         headers={"Authorization": f"Bearer {admin_token}"},
     )
     assert response.status_code == 404
+
+
+# ============================================================
+# REGRESSION TEST: active query param bug
+# ============================================================
+
+
+def test_get_users_filter_active_false(client, admin_token, db_session):
+    """Test that ?active=false correctly filters to inactive users."""
+    from app.models import Role, User
+
+    # Always create or ensure the specific test user exists
+    existing = User.query.filter_by(username="inactive_test_filter").first()
+    if not existing:
+        viewer = Role.query.filter_by(name="viewer").first()
+        existing = User(
+            username="inactive_test_filter",
+            email="inactive_test_filter@test.com",
+            role_id=viewer.id,
+            is_active=False,
+            registration_status="approved",
+        )
+        existing.set_password("password123")
+        db_session.add(existing)
+        db_session.commit()
+    elif existing.is_active:
+        existing.is_active = False
+        db_session.commit()
+
+    response = client.get(
+        "/api/v1/users?active=false&search=inactive_test_filter",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert response.status_code == 200
+    data = response.get_json()
+    assert any(u["username"] == "inactive_test_filter" for u in data["data"])

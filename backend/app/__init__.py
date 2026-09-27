@@ -6,10 +6,10 @@ from datetime import datetime
 
 # Import Flask and core extensions
 from flask import Flask, jsonify, send_from_directory
-from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 
-from app.exceptions import ConfigurationException
+from app.exceptions import ConfigurationError
 
 # Try to import optional extensions, but don't fail if they're not installed
 try:
@@ -161,10 +161,10 @@ def _initialize_critical_service(
     except (ValueError, RuntimeError, ConnectionError, OSError, ImportError) as e:
         # Security validation errors, connection issues, or configuration errors
         if isinstance(e, ValueError):
-            logger.exception(f"{service_name} configuration error: {e}")
+            logger.exception(f"{service_name} configuration error")
         else:
             logger.exception(
-                f"{service_name} security validation failed: {e}",
+                f"{service_name} security validation failed",
             )
 
         # For backwards compatibility, also use environment detection error handling
@@ -184,7 +184,7 @@ def _initialize_critical_service(
         return should_continue
 
     except Exception as e:
-        logger.exception(f"Failed to initialize {service_name}: {e}")
+        logger.exception(f"Failed to initialize {service_name}")
 
         # For backwards compatibility, also use environment detection error handling
         from app.utils.environment import handle_environment_detection_error
@@ -214,7 +214,7 @@ def create_app(config_name=None):
     from app.refactor_helpers import configure_debug_mode, setup_logging_level
 
     # Create Flask app with static folder for React build
-    app = Flask(__name__, static_folder='../dist', static_url_path='')
+    app = Flask(__name__, static_folder="../dist", static_url_path="")
 
     # Determine configuration name from environment
     config_name = determine_config_name(config_name)
@@ -241,18 +241,20 @@ def create_app(config_name=None):
     # ============================================
     # CONFIGURE CORS - Allow Netlify
     # ============================================
-    CORS(app, 
-         origins=[
-             'https://thermacoreapp.netlify.app',
-             'https://*.netlify.app',
-             'https://thermacoreapp.onrender.com',
-             'http://localhost:3000',
-             'http://localhost:5173'
-         ],
-         supports_credentials=True,
-         allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-         expose_headers=['Content-Type', 'Authorization'])
+    CORS(
+        app,
+        origins=[
+            "https://thermacoreapp.netlify.app",
+            "https://*.netlify.app",
+            "https://thermacoreapp.onrender.com",
+            "http://localhost:3000",
+            "http://localhost:5173",
+        ],
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        expose_headers=["Content-Type", "Authorization"],
+    )
 
     # Set up middleware
     _setup_middleware(app)
@@ -300,26 +302,25 @@ def create_app(config_name=None):
     # ============================================
     # Serve React static files (SPA support)
     # ============================================
-    
-    @app.route('/')
+
+    @app.route("/")
     def serve_index():
         """Serve the React index.html."""
-        return send_from_directory(app.static_folder, 'index.html')
+        return send_from_directory(app.static_folder, "index.html")
 
-    @app.route('/<path:path>')
+    @app.route("/<path:path>")
     def serve_static(path):
         """Serve static files from the React build."""
         # Skip API routes - let them be handled by the blueprints
-        if path.startswith('api/') or path.startswith('auth/') or path.startswith('health'):
+        if path.startswith(("api/", "auth/", "health")):
             return None
-        
+
         # Check if the file exists in the dist folder
-        import os
         file_path = os.path.join(app.static_folder, path)
         if os.path.exists(file_path) and os.path.isfile(file_path):
             return send_from_directory(app.static_folder, path)
-        
+
         # For all other paths, serve index.html (SPA routing)
-        return send_from_directory(app.static_folder, 'index.html')
+        return send_from_directory(app.static_folder, "index.html")
 
     return app

@@ -1,3 +1,5 @@
+import AccountPreferencesBridge from "./components/settings/AccountPreferencesBridge";
+import { reloadApplication } from "./utils/reloadApplication";
 // src/App.jsx
 
 import "./App.css";
@@ -23,6 +25,7 @@ import { SettingsProvider, useSettings } from "./context/SettingsContext";
 import { SidebarProvider } from "./context/SidebarContext";
 import { TenantProvider } from "./context/TenantContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { AnalyticsProvider } from "./context/AnalyticsContext";
 import { UnitProvider } from "./context/UnitContext";
 import playSound from "./utils/audioPlayer";
 
@@ -40,14 +43,17 @@ const ScrollToTop = () => {
 };
 
 // FIXED: Hoisted outside AppContent to prevent recreating lazy components on every render
+const UnitDetailsPage = React.lazy(() => import("./components/UnitDetails"));
 const roleBasedComponents = {
   "unit-role-based": {
-    admin: React.lazy(() => import("./components/UnitControl")),
-    user: React.lazy(() => import("./components/UserUnitDetails")),
+    admin: UnitDetailsPage,
+    client_admin: UnitDetailsPage,
+    user: UnitDetailsPage,
   },
   "unit-details-role-based": {
-    admin: React.lazy(() => import("./components/UnitDetails")),
-    user: React.lazy(() => import("./components/UserUnitDetails")),
+    admin: UnitDetailsPage,
+    client_admin: UnitDetailsPage,
+    user: UnitDetailsPage,
   },
 };
 
@@ -98,15 +104,20 @@ const AppContent = () => {
 
     if (justLoggedIn && settings.soundEnabled) {
       try {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        playSound("login-sound.mp3", settings.soundEnabled, settings.volume);
+        const soundPromise = playSound(
+          "login-sound.mp3",
+          settings.soundEnabled,
+          settings.volume,
+        );
+        if (soundPromise && typeof soundPromise.catch === "function") {
+          soundPromise.catch(() => {
+            // Silently ignore sound playback errors
+          });
+        }
       } catch (_error) {
-        // Don't set app error for sound issues
+        // Silently ignore synchronous sound errors
       }
     }
-    // Intentionally NOT depending on settings.soundEnabled/settings.volume:
-    // we only want to react to actual login transitions, and read the
-    // latest settings values at that moment via closure.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, isLoading]);
 
@@ -124,7 +135,7 @@ const AppContent = () => {
             type="button"
             onClick={() => {
               setAppError(null);
-              window.location.reload();
+              reloadApplication();
             }}
             className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
           >
@@ -198,30 +209,33 @@ const AppContent = () => {
                 ? roleBasedComponents[route.specialHandling]
                 : null;
 
+              const routeElement = (
+                <React.Suspense
+                  fallback={
+                    <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center">
+                      <div className="text-center">
+                        <Spinner size="lg" className="mx-auto mb-4" />
+                        <p className="text-gray-600 dark:text-gray-400">
+                          Loading page...
+                        </p>
+                      </div>
+                    </div>
+                  }
+                >
+                  <ProtectedRoute
+                    component={route.component}
+                    componentMap={componentMap}
+                    roles={route.roles}
+                    premium={route.premium}
+                  />
+                </React.Suspense>
+              );
+
               return (
                 <Route
                   key={`${route.path}-${index}`}
                   path={route.path}
-                  element={
-                    <React.Suspense
-                      fallback={
-                        <div className="min-h-screen bg-blue-50 dark:bg-gray-950 flex items-center justify-center">
-                          <div className="text-center">
-                            <Spinner size="lg" className="mx-auto mb-4" />
-                            <p className="text-gray-600 dark:text-gray-400">
-                              Loading page...
-                            </p>
-                          </div>
-                        </div>
-                      }
-                    >
-                      <ProtectedRoute
-                        component={route.component}
-                        componentMap={componentMap}
-                        roles={route.roles}
-                      />
-                    </React.Suspense>
-                  }
+                  element={routeElement}
                 />
               );
             })}
@@ -238,13 +252,16 @@ const App = () => {
     <ThemeProvider>
       <SettingsProvider>
         <AuthProvider>
+          <AccountPreferencesBridge />
           <TenantProvider>
             <UnitProvider>
-              <SidebarProvider>
-                <Router>
-                  <AppContent />
-                </Router>
-              </SidebarProvider>
+              <AnalyticsProvider>
+                <SidebarProvider>
+                  <Router>
+                    <AppContent />
+                  </Router>
+                </SidebarProvider>
+              </AnalyticsProvider>
             </UnitProvider>
           </TenantProvider>
         </AuthProvider>

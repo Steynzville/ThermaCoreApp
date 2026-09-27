@@ -29,6 +29,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import AdvancedAlertDashboard from "./alerts/AdvancedAlertDashboard";
 import PerformanceAnalyticsDashboard from "./analytics/PerformanceAnalyticsDashboard";
 import ComprehensiveVisualizationDashboard from "./visualization/ComprehensiveVisualizationDashboard";
+import { ScadaProvider } from "../context/ScadaContext";
+import TenantSwitcher from "./admin/TenantSwitcher";
 import "./Scada/ScadaStyles.css";
 import "../styles/theme.css";
 
@@ -363,7 +365,10 @@ const ScadaMainPage = ({ className = "" }) => {
 // Wrap with error boundary
 const ScadaMainPageWithErrorBoundary = (props) => (
   <ScadaErrorBoundary>
-    <ScadaMainPage {...props} />
+    <ScadaProvider>
+      <TenantSwitcher />
+      <ScadaMainPage {...props} />
+    </ScadaProvider>
   </ScadaErrorBoundary>
 );
 

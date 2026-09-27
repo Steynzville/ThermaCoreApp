@@ -47,7 +47,11 @@ vi.mock("../components/PowerIcon3D", () => ({
 
 vi.mock("../components/WaterIcon3D", () => ({
   default: ({ waterLevel, greyedOut }) => (
-    <div data-testid="water-icon" data-water-level={waterLevel} data-greyed-out={greyedOut}>
+    <div
+      data-testid="water-icon"
+      data-water-level={waterLevel}
+      data-greyed-out={greyedOut}
+    >
       💧 {waterLevel}%
     </div>
   ),
@@ -84,16 +88,40 @@ vi.mock("../components/ui/card", () => ({
     </div>
   ),
   CardHeader: ({ children }) => <div data-testid="card-header">{children}</div>,
-  CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
+  CardContent: ({ children }) => (
+    <div data-testid="card-content">{children}</div>
+  ),
 }));
 
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
-  AlertTriangle: ({ className }) => <span data-testid="alert-triangle" className={className}>⚠</span>,
-  CheckCircle: ({ className }) => <span data-testid="check-circle" className={className}>✓</span>,
-  Filter: ({ className }) => <span data-testid="filter" className={className}>Filter</span>,
-  User: ({ className }) => <span data-testid="user" className={className}>User</span>,
-  Zap: ({ className }) => <span data-testid="zap" className={className}>⚡</span>,
+  Flame: () => <span>Heat</span>,
+  Snowflake: () => <span>Chill</span>,
+  AlertTriangle: ({ className }) => (
+    <span data-testid="alert-triangle" className={className}>
+      ⚠
+    </span>
+  ),
+  CheckCircle: ({ className }) => (
+    <span data-testid="check-circle" className={className}>
+      ✓
+    </span>
+  ),
+  Filter: ({ className }) => (
+    <span data-testid="filter" className={className}>
+      Filter
+    </span>
+  ),
+  User: ({ className }) => (
+    <span data-testid="user" className={className}>
+      User
+    </span>
+  ),
+  Zap: ({ className }) => (
+    <span data-testid="zap" className={className}>
+      ⚡
+    </span>
+  ),
 }));
 
 // Mock units data
@@ -183,7 +211,9 @@ const createLargeDataset = (count) =>
     id: `TC${String(i + 1).padStart(3, "0")}`,
     name: `ThermaCore Unit ${String(i + 1).padStart(3, "0")}`,
     serialNumber: `TC-2024-${String(i + 1).padStart(3, "0")}`,
-    location: ["New York", "Boston", "Chicago", "Seattle", "Denver", "Miami"][i % 6],
+    location: ["New York", "Boston", "Chicago", "Seattle", "Denver", "Miami"][
+      i % 6
+    ],
     status: ["online", "offline", "maintenance"][i % 3],
     currentPower: 100,
     hasAlert: i % 3 === 0,
@@ -199,15 +229,11 @@ const createLargeDataset = (count) =>
 const renderWithRouter = (ui, { route = "/" } = {}) => {
   // Set up the location mock for this render
   mockUseLocation.mockReturnValue({
-    search: new URLSearchParams(route.split('?')[1] || "").toString(),
-    pathname: route.split('?')[0] || "/",
+    search: new URLSearchParams(route.split("?")[1] || "").toString(),
+    pathname: route.split("?")[0] || "/",
   });
-  
-  return render(
-    <MemoryRouter initialEntries={[route]}>
-      {ui}
-    </MemoryRouter>
-  );
+
+  return render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>);
 };
 
 describe("GridView", () => {
@@ -215,7 +241,7 @@ describe("GridView", () => {
     vi.clearAllMocks();
     mockSearch = "";
     mockNavigate.mockClear();
-    
+
     // Reset mockUseLocation
     mockUseLocation.mockReturnValue({
       search: "",
@@ -267,18 +293,21 @@ describe("GridView", () => {
       renderWithRouter(<GridView />);
       const searchInput = screen.getByTestId("search-bar");
       expect(searchInput).toBeInTheDocument();
-      
+
       fireEvent.change(searchInput, {
         target: { value: "Unit 001" },
       });
 
       // Wait for the filter to apply - use getAllByText with function matcher
-      await waitFor(() => {
-        const elements = screen.getAllByText((content) => {
-          return content.includes("ThermaCore Unit 001");
-        });
-        expect(elements.length).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const elements = screen.getAllByText((content) => {
+            return content.includes("ThermaCore Unit 001");
+          });
+          expect(elements.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -287,36 +316,42 @@ describe("GridView", () => {
       renderWithRouter(<GridView />);
       const comboboxes = screen.getAllByRole("combobox");
       expect(comboboxes.length).toBeGreaterThan(0);
-      
+
       fireEvent.change(comboboxes[0], {
         target: { value: "Online" },
       });
 
       // Wait for the filter to apply - check for "ONLINE" text in the status badge
-      await waitFor(() => {
-        const elements = screen.getAllByText((content) => {
-          return content.toUpperCase().includes("ONLINE");
-        });
-        expect(elements.length).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const elements = screen.getAllByText((content) => {
+            return content.toUpperCase().includes("ONLINE");
+          });
+          expect(elements.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("filters offline", async () => {
       renderWithRouter(<GridView />);
       const comboboxes = screen.getAllByRole("combobox");
       expect(comboboxes.length).toBeGreaterThan(0);
-      
+
       fireEvent.change(comboboxes[0], {
         target: { value: "Offline" },
       });
 
       // Wait for the filter to apply - check for "OFFLINE" text in the status badge
-      await waitFor(() => {
-        const elements = screen.getAllByText((content) => {
-          return content.toUpperCase().includes("OFFLINE");
-        });
-        expect(elements.length).toBeGreaterThan(0);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const elements = screen.getAllByText((content) => {
+            return content.toUpperCase().includes("OFFLINE");
+          });
+          expect(elements.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 },
+      );
     });
   });
 
@@ -327,7 +362,7 @@ describe("GridView", () => {
         units: createLargeDataset(10),
         loading: false,
       });
-      
+
       renderWithRouter(<GridView />);
       const elements = screen.getAllByText(/Load more Units/i);
       expect(elements.length).toBeGreaterThan(0);
@@ -338,21 +373,24 @@ describe("GridView", () => {
         units: createLargeDataset(10),
         loading: false,
       });
-      
+
       renderWithRouter(<GridView />);
       const loadMoreElements = screen.getAllByText(/Load more Units/i);
       expect(loadMoreElements.length).toBeGreaterThan(0);
-      
+
       // Count initial units
       const initialUnits = screen.getAllByText(/ThermaCore Unit/);
       const initialCount = initialUnits.length;
-      
+
       fireEvent.click(loadMoreElements[0]);
 
-      await waitFor(() => {
-        const elements = screen.getAllByText(/ThermaCore Unit/);
-        expect(elements.length).toBeGreaterThan(initialCount);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const elements = screen.getAllByText(/ThermaCore Unit/);
+          expect(elements.length).toBeGreaterThan(initialCount);
+        },
+        { timeout: 3000 },
+      );
     });
 
     it("hides load more when no extra units", () => {
@@ -373,7 +411,7 @@ describe("GridView", () => {
       // Find the unit card and click it
       const unitElements = screen.getAllByText("ThermaCore Unit 001");
       expect(unitElements.length).toBeGreaterThan(0);
-      
+
       // Find the parent card and click it
       const card = unitElements[0].closest('[data-testid="card"]');
       if (card) {
@@ -398,7 +436,7 @@ describe("GridView", () => {
       renderWithRouter(<GridView />);
       const unitElements = screen.getAllByText("ThermaCore Unit 001");
       expect(unitElements.length).toBeGreaterThan(0);
-      
+
       // Find the parent card and click it
       const card = unitElements[0].closest('[data-testid="card"]');
       if (card) {
@@ -448,9 +486,9 @@ describe("GridView", () => {
         search: "status=online",
         pathname: "/",
       });
-      
+
       renderWithRouter(<GridView />, { route });
-      
+
       // The combobox should show "Online"
       const comboboxes = screen.getAllByRole("combobox");
       expect(comboboxes.length).toBeGreaterThan(0);
@@ -463,9 +501,9 @@ describe("GridView", () => {
         search: "alerts=true",
         pathname: "/",
       });
-      
+
       renderWithRouter(<GridView />, { route });
-      
+
       const comboboxes = screen.getAllByRole("combobox");
       expect(comboboxes.length).toBeGreaterThan(0);
       expect(comboboxes[0]).toHaveValue("Alerts");
@@ -477,9 +515,9 @@ describe("GridView", () => {
         search: "search=Unit%20001",
         pathname: "/",
       });
-      
+
       renderWithRouter(<GridView />, { route });
-      
+
       const searchInput = screen.getByTestId("search-bar");
       expect(searchInput).toHaveValue("Unit 001");
     });
@@ -488,7 +526,7 @@ describe("GridView", () => {
   describe("Default Status Filter", () => {
     it("shows 'All Status' as default filter", () => {
       renderWithRouter(<GridView />);
-      
+
       const comboboxes = screen.getAllByRole("combobox");
       expect(comboboxes.length).toBeGreaterThan(0);
       expect(comboboxes[0]).toHaveValue("All Status");

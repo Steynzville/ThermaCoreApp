@@ -8,11 +8,10 @@
  * - Real-time alert integration
  */
 
-import { useState } from "react";
-import {
-  useRealtimeHistoricalData,
-  useRealtimeMetrics,
-} from "../../hooks/useRealtimeData";
+import { useEffect, useState } from "react";
+import { useScada } from "../../context/ScadaContext";
+import { historyMetrics } from "../../services/unitHistoryService";
+import { isDemoMode } from "../../config/runtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import IndustrialGauge from "./IndustrialGauge";
 import MultiTimeframeTrendChart from "./MultiTimeframeTrendChart";
@@ -24,113 +23,88 @@ const ComprehensiveVisualizationDashboard = ({
 }) => {
   const [selectedTab, setSelectedTab] = useState(defaultTab);
 
-  // Real-time data hooks
-  const { metrics } = useRealtimeMetrics({
-    useMockData: true,
-  });
-  const { data: historicalData } = useRealtimeHistoricalData({
-    hours: 24,
-    useMockData: true,
-  });
-
-  // Mock process flow data
-  const processNodes = [
-    {
-      id: "pump1",
-      label: "Pump 1",
-      icon: "P",
-      x: 100,
-      y: 150,
-      status: "running",
-    },
-    {
-      id: "heat1",
-      label: "Heater",
-      icon: "H",
-      x: 300,
-      y: 150,
-      status: "running",
-    },
-    {
-      id: "tank1",
-      label: "Tank 1",
-      icon: "T",
-      x: 500,
-      y: 150,
-      status: "running",
-    },
-    {
-      id: "valve1",
-      label: "Valve 1",
-      icon: "V",
-      x: 300,
-      y: 300,
-      status: "warning",
-    },
-    {
-      id: "pump2",
-      label: "Pump 2",
-      icon: "P",
-      x: 500,
-      y: 300,
-      status: "running",
-    },
-    {
-      id: "outlet",
-      label: "Outlet",
-      icon: "O",
-      x: 700,
-      y: 250,
-      status: "running",
-    },
-  ];
-
-  const processConnections = [
-    { id: "c1", from: "pump1", to: "heat1" },
-    { id: "c2", from: "heat1", to: "tank1" },
-    { id: "c3", from: "heat1", to: "valve1" },
-    { id: "c4", from: "valve1", to: "pump2" },
-    { id: "c5", from: "tank1", to: "outlet" },
-    { id: "c6", from: "pump2", to: "outlet" },
-  ];
-
-  const processLiveData = {
-    pump1: { status: "running", value: 45.2, unit: "L/min" },
-    heat1: { status: "running", value: 72.5, unit: "°C" },
-    tank1: { status: "running", value: 85.0, unit: "%" },
-    valve1: { status: "warning", value: 65.0, unit: "%" },
-    pump2: { status: "running", value: 38.7, unit: "L/min" },
-    outlet: { status: "running", value: 70.1, unit: "°C" },
-    c1: { flowRate: 45.2 },
-    c2: { flowRate: 35.0 },
-    c3: { flowRate: 10.2 },
-    c4: { flowRate: 10.2 },
-    c5: { flowRate: 35.0 },
-    c6: { flowRate: 10.2 },
+  const { unit, data: historicalData, period, setPeriod, loading } = useScada();
+  useEffect(() => setSelectedTab(defaultTab), [defaultTab]);
+  const processNodes = isDemoMode
+    ? [
+        { id: "pump1", label: "Inlet", icon: "P", x: 100, y: 150 },
+        { id: "heat1", label: "Hot outlet", icon: "H", x: 300, y: 150 },
+        { id: "tank1", label: "AWG tank", icon: "T", x: 500, y: 150 },
+        { id: "valve1", label: "Chill outlet", icon: "V", x: 300, y: 300 },
+        { id: "pump2", label: "Chill flow", icon: "P", x: 500, y: 300 },
+        { id: "outlet", label: "Electrical", icon: "O", x: 700, y: 250 },
+      ]
+    : unit?.processDiagram?.nodes || [];
+  const processConnections = isDemoMode
+    ? [
+        { id: "c1", from: "pump1", to: "heat1" },
+        { id: "c2", from: "heat1", to: "tank1" },
+        { id: "c3", from: "heat1", to: "valve1" },
+        { id: "c4", from: "valve1", to: "pump2" },
+        { id: "c5", from: "tank1", to: "outlet" },
+        { id: "c6", from: "pump2", to: "outlet" },
+      ]
+    : unit?.processDiagram?.connections || [];
+  const channels = {
+    pump1: ["flowRateInlet", "L/min"],
+    heat1: ["tempOutHot", "°C"],
+    tank1: ["awgWaterLevel", "L"],
+    valve1: ["tempOutChill", "°C"],
+    pump2: ["flowRateOutChill", "L/min"],
+    outlet: ["currentPower", "kW"],
   };
-
-  // Trend chart metrics configuration
-  const trendMetrics = [
-    {
-      dataKey: "temperature",
-      label: "Temperature (°C)",
-      color: "#ef4444",
+  const processLiveData = Object.fromEntries(
+    processNodes.map((node) => {
+      const [field, measurementUnit] = isDemoMode
+        ? channels[node.id]
+        : [node.field, node.unit];
+      const value = unit?.[field];
+      return [
+        node.id,
+        {
+          value,
+          unit: measurementUnit,
+          status:
+            isDemoMode && unit?.status === "online" && value != null
+              ? "running"
+              : "idle",
+        },
+      ];
+    }),
+  );
+  const trendMetrics = historyMetrics.map(
+    ([label, dataKey, measurementUnit, color]) => ({
+      dataKey,
+      label: `${label.replace(" History", "")} (${measurementUnit})`,
+      color,
       type: "line",
-    },
-    {
-      dataKey: "pressure",
-      label: "Pressure (PSI)",
-      color: "#3b82f6",
-      type: "line",
-    },
-    {
-      dataKey: "activeUnits",
-      label: "Active Units",
-      color: "#22c55e",
-      type: "bar",
-    },
+    }),
+  );
+  const gauges = [
+    ["Temperature In", "tempIn", "°C", 100],
+    ["Temperature Out - Hot", "tempOutHot", "°C", 100],
+    ["Differential Pressure", "differentialPressure", "bar", 10],
+    ["Battery Voltage", "batteryVoltage", "V", 30],
+    ["Flow Rate Out - Chill", "flowRateOutChill", "L/min", 100],
+    ["Flow Rate Out - Hot", "flowRateOutHot", "L/min", 100],
+    ["AWG Water Level", "awgWaterLevel", "L", 1000],
+    ["Temperature Out - Chill", "tempOutChill", "°C", 100],
+    ["Electrical Power", "currentPower", "kW", 100],
+    ["Useful Heating", "usefulHeat", "kWth", 100],
+    ["Useful Chilling", "usefulChill", "kWth", 100],
+    ["Potable Water Production", "waterRate", "L/h", 100],
   ];
-
+  const renderGauge = ([title, field, measurementUnit, max]) => (
+    <IndustrialGauge
+      key={field}
+      title={title}
+      value={unit?.[field]}
+      min={0}
+      max={Math.max(max, unit?.[field] || 0)}
+      unit={measurementUnit}
+      showThresholds={false}
+    />
+  );
   return (
     <div className={embedded ? "" : "min-h-screen bg-background p-4 sm:p-6"}>
       <div className={embedded ? "" : "max-w-7xl mx-auto space-y-6"}>
@@ -146,6 +120,12 @@ const ComprehensiveVisualizationDashboard = ({
           </div>
         )}
 
+        {!processNodes.length && (
+          <p className="text-sm text-muted-foreground">
+            Process topology is not configured for this unit.
+          </p>
+        )}
+        {loading && <p role="status">Loading measured history…</p>}
         {/* Main Tabs */}
         <Tabs
           value={selectedTab}
@@ -188,52 +168,22 @@ const ComprehensiveVisualizationDashboard = ({
             <div>
               <h2 className="text-xl font-semibold mb-4">Critical Metrics</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <IndustrialGauge
-                  title="Temperature"
-                  value={parseFloat(metrics?.temperature?.current || 70)}
-                  min={0}
-                  max={100}
-                  unit="°C"
-                  thresholds={{ low: 20, normal: 60, high: 80 }}
-                  size={180}
-                />
-                <IndustrialGauge
-                  title="Pressure"
-                  value={parseFloat(metrics?.pressure?.current || 105)}
-                  min={0}
-                  max={150}
-                  unit="PSI"
-                  thresholds={{ low: 30, normal: 100, high: 130 }}
-                  size={180}
-                />
-                <IndustrialGauge
-                  title="Flow Rate"
-                  value={parseFloat(
-                    metrics?.flow_rate_inlet?.current ||
-                      metrics?.flowRateInlet?.current ||
-                      45.5,
-                  )}
-                  min={0}
-                  max={100}
-                  unit="L/min"
-                  thresholds={{ low: 10, normal: 70, high: 90 }}
-                  size={180}
-                />
-                <IndustrialGauge
-                  title="Tank Level"
-                  value={85}
-                  min={0}
-                  max={100}
-                  unit="%"
-                  thresholds={{ low: 20, normal: 80, high: 95 }}
-                  size={180}
-                />
+                {[
+                  gauges[0],
+                  gauges[2],
+                  ["Flow Rate Inlet", "flowRateInlet", "L/min", 100],
+                  gauges[6],
+                ].map(renderGauge)}
               </div>
             </div>
 
             {/* Quick Process Status */}
             <ProcessFlowDiagram
-              title="System Overview"
+              title={
+                isDemoMode
+                  ? "Illustrative demo process"
+                  : "Configured process diagram"
+              }
               nodes={processNodes}
               connections={processConnections}
               liveData={processLiveData}
@@ -243,10 +193,11 @@ const ComprehensiveVisualizationDashboard = ({
 
             {/* Recent Trends */}
             <MultiTimeframeTrendChart
-              title="Recent Trends (24h)"
+              title="Measured Trends"
               data={historicalData || []}
               metrics={trendMetrics}
-              defaultTimeframe="24h"
+              defaultTimeframe={period}
+              onTimeframeChange={setPeriod}
               height={300}
             />
           </TabsContent>
@@ -256,94 +207,7 @@ const ComprehensiveVisualizationDashboard = ({
             <div>
               <h2 className="text-xl font-semibold mb-4">All System Gauges</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <IndustrialGauge
-                  title="Temperature Zone 1"
-                  value={parseFloat(metrics?.temperature?.current || 72.3)}
-                  min={0}
-                  max={100}
-                  unit="°C"
-                  thresholds={{ low: 20, normal: 60, high: 80 }}
-                />
-                <IndustrialGauge
-                  title="Temperature Zone 2"
-                  value={parseFloat(
-                    (
-                      parseFloat(metrics?.temperature?.current || 72.3) * 0.95
-                    ).toFixed(1),
-                  )}
-                  min={0}
-                  max={100}
-                  unit="°C"
-                  thresholds={{ low: 20, normal: 60, high: 80 }}
-                />
-                <IndustrialGauge
-                  title="Pressure Main Line"
-                  value={parseFloat(metrics?.pressure?.current || 105)}
-                  min={0}
-                  max={150}
-                  unit="PSI"
-                  thresholds={{ low: 30, normal: 100, high: 130 }}
-                />
-                <IndustrialGauge
-                  title="Pressure Secondary"
-                  value={parseFloat(
-                    (
-                      parseFloat(metrics?.pressure?.current || 105) * 0.93
-                    ).toFixed(1),
-                  )}
-                  min={0}
-                  max={150}
-                  unit="PSI"
-                  thresholds={{ low: 30, normal: 100, high: 130 }}
-                />
-                <IndustrialGauge
-                  title="Flow Rate Inlet"
-                  value={parseFloat(
-                    metrics?.flow_rate_inlet?.current ||
-                      metrics?.flowRateInlet?.current ||
-                      45.5,
-                  )}
-                  min={0}
-                  max={100}
-                  unit="L/min"
-                  thresholds={{ low: 10, normal: 70, high: 90 }}
-                />
-                <IndustrialGauge
-                  title="Flow Rate Outlet"
-                  value={parseFloat(
-                    metrics?.flow_rate_outlet?.current ||
-                      metrics?.flowRateOutlet?.current ||
-                      42.1,
-                  )}
-                  min={0}
-                  max={100}
-                  unit="L/min"
-                  thresholds={{ low: 10, normal: 70, high: 90 }}
-                />
-                <IndustrialGauge
-                  title="Tank 1 Level"
-                  value={85}
-                  min={0}
-                  max={100}
-                  unit="%"
-                  thresholds={{ low: 20, normal: 80, high: 95 }}
-                />
-                <IndustrialGauge
-                  title="Tank 2 Level"
-                  value={78}
-                  min={0}
-                  max={100}
-                  unit="%"
-                  thresholds={{ low: 20, normal: 80, high: 95 }}
-                />
-                <IndustrialGauge
-                  title="Power Consumption"
-                  value={62}
-                  min={0}
-                  max={100}
-                  unit="kW"
-                  thresholds={{ low: 10, normal: 70, high: 90 }}
-                />
+                {gauges.map(renderGauge)}
               </div>
             </div>
           </TabsContent>
@@ -351,10 +215,11 @@ const ComprehensiveVisualizationDashboard = ({
           {/* Trends Tab */}
           <TabsContent value="trends" className="space-y-6 mt-6">
             <MultiTimeframeTrendChart
-              title="Temperature & Pressure Analysis"
+              title="Machine Metric Analysis"
               data={historicalData || []}
               metrics={trendMetrics}
-              defaultTimeframe="24h"
+              defaultTimeframe={period}
+              onTimeframeChange={setPeriod}
               defaultChartType="line"
               height={400}
             />
@@ -363,8 +228,10 @@ const ComprehensiveVisualizationDashboard = ({
               <MultiTimeframeTrendChart
                 title="System Temperature"
                 data={historicalData || []}
-                metrics={[trendMetrics[0]]}
-                defaultTimeframe="7d"
+                metrics={[
+                  trendMetrics.find((metric) => metric.dataKey === "tempIn"),
+                ]}
+                defaultTimeframe={period}
                 defaultChartType="area"
                 height={300}
                 showControls={false}
@@ -372,8 +239,12 @@ const ComprehensiveVisualizationDashboard = ({
               <MultiTimeframeTrendChart
                 title="System Pressure"
                 data={historicalData || []}
-                metrics={[trendMetrics[1]]}
-                defaultTimeframe="7d"
+                metrics={[
+                  trendMetrics.find(
+                    (metric) => metric.dataKey === "differentialPressure",
+                  ),
+                ]}
+                defaultTimeframe={period}
                 defaultChartType="area"
                 height={300}
                 showControls={false}

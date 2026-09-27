@@ -233,7 +233,7 @@ class SecureOPCUAWrapper:
                 "node_read_failed",
                 {"node_id": self.sanitize_node_id(node_id), "error": str(e)},
             )
-            logger.exception(f"Failed to read node securely: {e}")
+            logger.exception("Failed to read node securely")
             return None
 
     def get_security_status(self) -> dict[str, Any]:

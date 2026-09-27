@@ -5,6 +5,8 @@ from datetime import datetime
 
 from flask import current_app
 
+from app.utils.data_mode import demo_enabled
+
 from .base import ProtocolStatus
 
 logger = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ def validate_registry() -> None:
     protocol_names: set[str] = set()
     duplicates: list[str] = []
 
-    for name, attr in REGISTRY:
+    for name, _attr in REGISTRY:
         if name in protocol_names:
             duplicates.append(name)
         else:
@@ -73,6 +75,8 @@ def collect_protocol_status() -> list[dict]:
         processed_names.add(name)
 
         adapter = getattr(current_app, attr, None)
+        if name in {"modbus", "dnp3", "simulator"} and not demo_enabled():
+            adapter = None
         if adapter and hasattr(adapter, "get_status"):
             try:
                 raw = adapter.get_status()
@@ -134,7 +138,7 @@ def collect_protocol_status() -> list[dict]:
                         status_obj.update_availability_level()
 
             except Exception as exc:  # Defensive: capture per-adapter failure
-                logger.exception(f"Failed to get status for protocol '{name}': {exc!s}")
+                logger.exception("Failed to get status for protocol '{name}'")
                 status_obj = ProtocolStatus(
                     name=name,
                     available=False,

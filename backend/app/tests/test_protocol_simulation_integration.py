@@ -228,7 +228,7 @@ class TestProtocolSimulationIntegration:
 
             # Generate test data multiple times to simulate heartbeat
             data_points = []
-            for i in range(3):
+            for _i in range(3):
                 data = simulator.generate_sensor_value("UNIT001", "temperature")
                 data_points.append(data)
                 time.sleep(0.1)  # Small delay
@@ -249,13 +249,13 @@ class TestProtocolSimulationIntegration:
         """Test complete pipeline from protocol adapters through registry to status reporting."""
         with app.app_context():
             # Set up test units in database
-            from datetime import date
+            from datetime import timezone
 
             unit = Unit(
                 id="UNIT001",
                 name="Test Unit 1",
                 serial_number="SN001",
-                install_date=date.today(),
+                install_date=datetime.now(timezone.utc).date(),
                 location="Test Location",
                 status=UnitStatusEnum.ONLINE,
             )
@@ -321,3 +321,8 @@ class TestProtocolSimulationIntegration:
                 # OPC UA might not have metrics in its current status format
                 # but should have basic info
                 assert "available" in opcua_status
+
+
+@pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

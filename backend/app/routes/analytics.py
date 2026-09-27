@@ -249,8 +249,8 @@ def get_unit_trends(args, unit_id):
             )
 
         # Calculate statistics for each sensor type
-        for sensor_key in trends:
-            values = [d["value"] for d in trends[sensor_key]["data"]]
+        for sensor_key, sensor_data in trends.items():
+            values = [d["value"] for d in sensor_data["data"]]
             if values:
                 trends[sensor_key]["statistics"] = {
                     "min": min(values),
@@ -494,3 +494,10 @@ def get_alert_patterns(args):
             e,
             "Failed to analyze alert patterns",
         )
+
+
+@analytics_bp.before_request
+def require_premium_analytics():
+    from app.middleware.entitlements import premium_required
+
+    return premium_required(lambda: None)()

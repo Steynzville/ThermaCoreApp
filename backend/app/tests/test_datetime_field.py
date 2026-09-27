@@ -1,6 +1,6 @@
 """Test DateTimeField robustness improvements."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.utils.schemas import DateTimeField
 
@@ -53,7 +53,7 @@ class TestDateTimeFieldRobustness:
         """Test that datetime objects are handled correctly."""
         field = DateTimeField()
 
-        dt = datetime(2024, 1, 15, 10, 30, 0)
+        dt = datetime(2024, 1, 15, 10, 30, 0, tzinfo=timezone.utc)
         result = field._serialize(dt, "test_field", None)
         assert result is not None
         assert isinstance(result, str)

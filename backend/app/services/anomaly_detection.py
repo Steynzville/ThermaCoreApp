@@ -216,14 +216,14 @@ class AnomalyDetectionService:
                 )
             )
 
-            iqr_anomaly, iqr_score, iqr_stats = (
+            iqr_anomaly, iqr_score, _iqr_stats = (
                 self._statistical_detector.detect_iqr_anomalies(
                     historical_values,
                     value,
                 )
             )
 
-            ma_anomaly, ma_score, ma_stats = (
+            ma_anomaly, ma_score, _ma_stats = (
                 self._moving_average_detector.detect_anomalies(historical_values, value)
             )
 
@@ -262,8 +262,8 @@ class AnomalyDetectionService:
 
             return result
 
-        except Exception as e:
-            logger.exception(f"Error analyzing sensor reading: {e}")
+        except Exception:
+            logger.exception("Error analyzing sensor reading")
             # Return safe default
             return AnomalyResult(
                 sensor_id=sensor_id,
@@ -373,7 +373,7 @@ class AnomalyDetectionService:
             }
 
         except Exception as e:
-            logger.exception(f"Error analyzing unit anomalies: {e}")
+            logger.exception("Error analyzing unit anomalies")
             return {
                 "unit_id": unit_id,
                 "error": str(e),

@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from webargs.flaskparser import use_args
 
 from app import db
-from app.exceptions import ValidationException
+from app.exceptions import ValidationError
 from app.middleware.audit import AuditEventType, AuditLogger
 from app.middleware.authorization import permission_required
 from app.middleware.rate_limit import auth_rate_limit, standard_rate_limit
@@ -19,7 +19,14 @@ from app.middleware.request_id import track_request_id
 from app.models import Role, User
 from app.utils.company_identifier import CompanyIdentifier
 from app.utils.error_handler import SecurityAwareErrorHandler
-from app.utils.helpers import get_current_user_id, get_role_permissions
+from app.utils.helpers import (
+    CLIENT_ADMIN_ASSIGNABLE_ROLES,
+    get_current_user_id,
+    get_role_permissions,
+)
+from app.utils.helpers import (
+    get_current_user as get_current_user_obj,
+)
 from app.utils.schemas import (
     ForgotPasswordSchema,
     LoginSchema,
@@ -83,6 +90,44 @@ def register(data):
             400,
         )
 
+    # --- Client-scoping for client_admin creators ---
+    current_user = get_current_user_obj()
+    if (
+        current_user
+        and current_user.role
+        and current_user.role.name.value == "client_admin"
+    ):
+        if not current_user.client_id:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Client admin has no client assigned"),
+                "authorization_error",
+                "Client assignment",
+                403,
+            )
+        # --- Client Admin role restriction ---
+        if role.name.value not in CLIENT_ADMIN_ASSIGNABLE_ROLES:
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Cannot assign this role"),
+                "authorization_error",
+                "Role assignment",
+                403,
+            )
+        # --- end role restriction ---
+        requested_client_id = data.get("client_id")
+        if (
+            requested_client_id is not None
+            and requested_client_id != current_user.client_id
+        ):
+            return SecurityAwareErrorHandler.handle_service_error(
+                Exception("Cannot assign users to a different client"),
+                "authorization_error",
+                "Client assignment",
+                403,
+            )
+        # Force the new user onto the client_admin's own client regardless of payload
+        data["client_id"] = current_user.client_id
+    # --- end client-scoping ---
+
     # Get permissions for this role
     role_permissions = get_role_permissions(role.name.value)
 
@@ -106,6 +151,7 @@ def register(data):
         department=data.get("department"),
         position=data.get("position"),
         role_id=data["role_id"],
+        client_id=data.get("client_id"),
         permissions=role_permissions,  # Set permissions based on role
     )
     user.set_password(data["password"])
@@ -321,7 +367,7 @@ def login(data):
             # Pre-validate configuration
             if "JWT_ACCESS_TOKEN_EXPIRES" not in current_app.config:
                 current_app.logger.error("JWT_ACCESS_TOKEN_EXPIRES not configured")
-                raise ValidationException("JWT configuration incomplete")
+                raise ValidationError("JWT configuration incomplete")
 
             token_schema = TokenSchema()
 
@@ -344,7 +390,7 @@ def login(data):
             if not serialized_data.get("access_token") or not serialized_data.get(
                 "user",
             ):
-                raise ValidationException("Serialization produced incomplete data")
+                raise ValidationError("Serialization produced incomplete data")
 
             current_app.logger.info(
                 f"Login successful for user {user.username}",
@@ -361,7 +407,7 @@ def login(data):
                 "Login successful",
                 200,
             )
-        except (ValueError, ValidationException) as val_error:
+        except (ValueError, ValidationError) as val_error:
             current_app.logger.exception(
                 "Validation error during serialization",
                 extra={
@@ -527,7 +573,7 @@ def refresh():
             )
 
             if not access_token:
-                raise ValidationException("Token generation returned empty token")
+                raise ValidationError("Token generation returned empty token")
 
         except Exception as token_error:
             current_app.logger.exception(
@@ -604,7 +650,7 @@ def refresh():
 
 @auth_bp.route("/auth/me", methods=["GET"])
 @jwt_required()
-def get_current_user():
+def get_me():
     """Get current authenticated user information.
     ---
     tags:
@@ -724,7 +770,7 @@ def change_password(data):
 
     except Exception as e:
         current_app.logger.exception(
-            f"Error changing password: {e}",
+            "Error changing password",
             extra={"event": "password_change_error"},
         )
         db.session.rollback()
@@ -759,6 +805,18 @@ def forgot_password(data):
         description: Rate limit exceeded
     """
     try:
+        missing = [
+            key
+            for key in ("SENDGRID_API_KEY", "EMAIL_FROM", "FRONTEND_URL")
+            if not current_app.config.get(key)
+        ]
+        if missing:
+            return jsonify(
+                {
+                    "error": "Password reset email is not configured: "
+                    + ", ".join(missing)
+                }
+            ), 503
         email = data.get("email")
 
         current_app.logger.info(
@@ -820,12 +878,12 @@ def forgot_password(data):
             if not success:
                 current_app.logger.error(
                     f"Failed to send reset email to {email}: {error}",
-                    extra={"event": "password_reset_email_failed"}
+                    extra={"event": "password_reset_email_failed"},
                 )
             else:
                 current_app.logger.info(
                     f"Password reset email sent to {email}",
-                    extra={"event": "password_reset_email_sent"}
+                    extra={"event": "password_reset_email_sent"},
                 )
 
         # Always return success to prevent email enumeration
@@ -837,7 +895,7 @@ def forgot_password(data):
 
     except Exception as e:
         current_app.logger.exception(
-            f"Error processing password reset request: {e}",
+            "Error processing password reset request",
             extra={"event": "password_reset_request_error"},
         )
         db.session.rollback()
@@ -958,7 +1016,7 @@ def reset_password(data):
 
     except Exception as e:
         current_app.logger.exception(
-            f"Error resetting password: {e}",
+            "Error resetting password",
             extra={"event": "password_reset_error"},
         )
         db.session.rollback()
@@ -972,6 +1030,8 @@ def reset_password(data):
 
 @auth_bp.route("/auth/emergency-admin", methods=["POST"])
 @track_request_id
+@jwt_required()
+@permission_required("admin_panel")
 def emergency_admin():
     """Emergency admin account creation/update endpoint.
 
@@ -981,6 +1041,15 @@ def emergency_admin():
 
     Creates/updates user: emergency_admin / EmergencyAdmin123!
 
+    **SECURITY**: This endpoint requires authentication with admin_panel permission.
+    NOTE: Because it requires an existing admin_panel-holding session, this is
+    effectively an admin-only account-reset utility rather than a break-glass
+    recovery mechanism for a fully locked-out deployment. If true break-glass
+    recovery is needed, use a separate out-of-band mechanism (e.g. a CLI/shell
+    script gated by server-side secrets, not an HTTP route).
+    In production, consider additional controls like IP allowlisting or
+    environment-based enable/disable.
+
     ---
     tags:
       - Authentication
@@ -989,6 +1058,8 @@ def emergency_admin():
         description: Emergency admin account created/updated successfully
       500:
         description: Server error
+    security:
+      - JWT: []
     """
     try:
         logger = logging.getLogger(__name__)
@@ -1130,7 +1201,7 @@ def emergency_admin():
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.exception(
-            f"Error in emergency admin endpoint: {e}",
+            "Error in emergency admin endpoint",
             extra={"event": "emergency_admin_error"},
         )
         return SecurityAwareErrorHandler.handle_service_error(

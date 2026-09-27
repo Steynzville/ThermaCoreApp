@@ -33,7 +33,7 @@ class TestSCADAIntegration:
         """Test complete pipeline from MQTT message to database storage."""
         with app.app_context():
             # Create test unit
-            from datetime import date
+            from datetime import timezone
 
             from app.models import UnitStatusEnum
 
@@ -41,7 +41,7 @@ class TestSCADAIntegration:
                 id="UNIT001",
                 name="Test Unit 1",
                 serial_number="SN001",  # Required field
-                install_date=date.today(),  # Required field
+                install_date=datetime.now(timezone.utc).date(),  # Required field
                 location="Test Location",
                 status=UnitStatusEnum.ONLINE,  # Use enum value
             )
@@ -212,3 +212,12 @@ class TestSCADAIntegration:
                 assert "websocket" in health_data["services"]
                 assert "anomaly_detection" in health_data["services"]
                 assert "protocol_simulator" in health_data["services"]
+
+
+# These adapter tests explicitly exercise the demonstration-only legacy drivers.
+import pytest as _demo_pytest
+
+
+@_demo_pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

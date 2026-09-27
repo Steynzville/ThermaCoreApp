@@ -107,6 +107,6 @@ def fix_user_permissions(engine):
 
         return True
 
-    except Exception as e:
-        logger.exception(f"Error fixing user permissions: {e}")
+    except Exception:
+        logger.exception("Error fixing user permissions")
         return False

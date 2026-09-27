@@ -126,8 +126,8 @@ def main():
             logger.info("   Authentication should be working!")
             return 0
 
-    except Exception as e:
-        logger.exception(f"❌ FATAL ERROR: {e}")
+    except Exception:
+        logger.exception("❌ FATAL ERROR")
         return 1
 
 

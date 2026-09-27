@@ -78,6 +78,8 @@ export const SettingsProvider = ({ children }) => {
   );
 };
 
+export const useOptionalSettings = () => useContext(SettingsContext);
+
 export const useSettings = () => {
   const context = useContext(SettingsContext);
   if (!context) {

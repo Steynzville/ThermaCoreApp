@@ -1,39 +1,11 @@
 import { AlertTriangle, CheckCircle, Clock, Info, Siren } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { units } from "../data/mockUnits";
+import { useUnits } from "../context/UnitContext";
+import { isAlarm, conditionType } from "../utils/conditions";
 import PageHeader from "./PageHeader";
 import { Card, CardContent } from "./ui/card";
 
-// Default mock alarm data. Extracted to a module-level constant (rather than
-// re-created inside the component) so it has a stable identity and so tests
-// can override it via the `alarms` prop without needing to remount internals.
-const defaultAlarms = [
-  {
-    id: 1,
-    type: "critical",
-    title: "NH3 LEAK DETECTED",
-    message:
-      "Critical alarm: Toxic ammonia leak detected in system. Immediate attention required.",
-    device: "ThermaCore Unit 003",
-    timestamp: "2025-09-09 15:30",
-    acknowledged: false,
-  },
-  {
-    id: 2,
-    type: "critical",
-    title: "NH3 LEAK DETECTED",
-    message:
-      "Critical alarm: Toxic ammonia leak detected in system. Immediate attention required.",
-    device: "ThermaCore Unit 014",
-    timestamp: "2025-09-09 15:15",
-    acknowledged: false,
-  },
-];
-
-// Exported so these can be unit tested directly against every alarm `type`,
-// including the `default` fallback branch, without needing to thread
-// contrived data all the way through a full component render.
 export const getAlarmIcon = (type) => {
   switch (type) {
     case "critical":
@@ -64,55 +36,26 @@ export const getAlarmColor = (type) => {
   }
 };
 
-const AlarmsView = ({ className, userRole, alarms: alarmsProp }) => {
+const AlarmsView = ({ className = "" }) => {
   const navigate = useNavigate();
-
-  // Tests can pass `alarms` to exercise scenarios the hardcoded default
-  // list can't reach (empty state, acknowledged alarms, non-critical types,
-  // malformed device names, unit lookups that miss).
-  const allAlarms = alarmsProp || defaultAlarms;
-
-  // Filter alarms based on user role
-  const alarms =
-    userRole === "user"
-      ? allAlarms.filter((alarm) => alarm.device === "ThermaCore Unit 003")
-      : allAlarms;
-
-  const handleAlarmClick = (alarm) => {
-    // Extract unit number from device name (e.g., "ThermaCore Unit 003" -> 3)
-    const unitMatch = alarm.device.match(/Unit (\d+)/);
-    if (unitMatch) {
-      const unitNumber = unitMatch[1].padStart(3, "0"); // Convert to 3-digit format (e.g., "003")
-      const unitId = `TC${unitNumber}`;
-
-      // Find the actual unit data from mockUnits
-      const unitData = units.find((unit) => unit.id === unitId);
-
-      if (unitData) {
-        // Add the specific alarm information to the unit data
-        const unitWithAlarm = {
-          ...unitData,
-          currentAlarm: {
-            type: alarm.type,
-            title: alarm.title,
-            message: alarm.message,
-            timestamp: alarm.timestamp,
-            acknowledged: alarm.acknowledged,
-          },
-        };
-
-        if (userRole === "admin") {
-          navigate(`/unit-details/${parseInt(unitMatch[1], 10)}`, {
-            state: { unit: unitWithAlarm },
-          });
-        } else {
-          navigate(`/unit/${parseInt(unitMatch[1], 10)}`, {
-            state: { unit: unitWithAlarm },
-          });
-        }
-      }
-    }
-  };
+  const [query] = useSearchParams();
+  const { alerts: conditions = [], loading, error } = useUnits();
+  const alarms = conditions
+    .filter(
+      (event) =>
+        isAlarm(event) &&
+        (!query.get("unit") || String(event.unitId) === query.get("unit")),
+    )
+    .map((event) => ({
+      ...event,
+      type: conditionType(event),
+      device: event.unitName,
+      title: event.title || event.message,
+    }));
+  const handleAlarmClick = (event) =>
+    navigate(
+      `/unit-details/${encodeURIComponent(event.unitId)}?tab=overview&event=${encodeURIComponent(event.id)}`,
+    );
 
   return (
     <div
@@ -124,11 +67,31 @@ const AlarmsView = ({ className, userRole, alarms: alarmsProp }) => {
           description="Critical system alarms requiring immediate attention"
         />
 
+        {loading && <p role="status">Loading conditions…</p>}
+        {error && <p role="alert">{error}</p>}
         {/* Alarms List */}
         <div className="space-y-3 lg:space-y-4">
           {alarms.map((alarm) => (
             <Card
               key={alarm.id}
+              id={`event-${alarm.id}`}
+              role="button"
+              tabIndex={0}
+              aria-current={
+                query.get("event") === String(alarm.id) ? "true" : undefined
+              }
+              style={{
+                outline:
+                  query.get("event") === String(alarm.id)
+                    ? "2px solid #2563eb"
+                    : undefined,
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  handleAlarmClick(alarm);
+                }
+              }}
               className={`border-l-4 ${getAlarmColor(alarm.type)} cursor-pointer hover:shadow-md transition-shadow`}
               onClick={() => handleAlarmClick(alarm)}
             >

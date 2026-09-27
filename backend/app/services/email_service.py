@@ -1,38 +1,63 @@
-# backend/app/services/email_service.py
+"""Email service for sending notifications via SendGrid."""
+
 import logging
+
 from flask import current_app
 
 # Try to import sendgrid
 try:
     from sendgrid import SendGridAPIClient
     from sendgrid.helpers.mail import Mail
+
     SENDGRID_AVAILABLE = True
 except ImportError:
+    # Define attributes even when import fails so patch.object() works in tests
+    SendGridAPIClient = None
+    Mail = None
     SENDGRID_AVAILABLE = False
-    logging.getLogger(__name__).warning("SendGrid not installed. Run: pip install sendgrid")
+    logging.getLogger(__name__).warning(
+        "SendGrid not installed. Run: pip install sendgrid",
+    )
 
 logger = logging.getLogger(__name__)
 
 
 def send_password_reset_email(email, token):
-    """Send a password reset email using SendGrid API."""
-    logger.info(f"=== EMAIL SERVICE CALLED for {email} ===")
-    
+    """Send a password reset email using SendGrid API.
+
+    Args:
+        email: Recipient email address
+        token: Password reset token
+
+    Returns:
+        tuple[bool, str | None]: (success, error_message)
+    """
+    # Log minimal info - email is PII, token is sensitive
+    logger.info("Password reset email requested")
+
     if not SENDGRID_AVAILABLE:
         logger.error("SendGrid library not installed. Run: pip install sendgrid")
         return False, "SendGrid library not installed"
 
     try:
-        api_key = current_app.config.get('SENDGRID_API_KEY')
-        from_email = current_app.config.get('EMAIL_FROM', 'steyn.enslin@gmail.com')
-        frontend_url = current_app.config.get('FRONTEND_URL')
+        api_key = current_app.config.get("SENDGRID_API_KEY")
+        from_email = current_app.config.get("EMAIL_FROM")
+        frontend_url = current_app.config.get("FRONTEND_URL")
 
         if not api_key:
             logger.error("SENDGRID_API_KEY not configured")
             return False, "SENDGRID_API_KEY not configured"
 
+        if not from_email:
+            logger.error("EMAIL_FROM not configured")
+            return False, "EMAIL_FROM not configured"
+
+        if not frontend_url:
+            logger.error("FRONTEND_URL not configured")
+            return False, "FRONTEND_URL not configured"
+
         reset_link = f"{frontend_url}/reset-password?token={token}"
-        logger.info(f"Reset link: {reset_link}")
+        logger.info("Reset link generated")
 
         message = Mail(
             from_email=from_email,
@@ -52,19 +77,23 @@ def send_password_reset_email(email, token):
                 <p>Best regards,<br>ThermaCore Team</p>
             </body>
             </html>
-            """
+            """,
         )
 
         sg = SendGridAPIClient(api_key)
         response = sg.send(message)
 
         if response.status_code in [200, 202]:
-            logger.info(f"✅ Password reset email sent to {email}")
+            logger.info("Password reset email sent successfully")
             return True, None
         else:
-            logger.error(f"❌ SendGrid error: {response.status_code} - {response.body}")
+            logger.error(
+                "SendGrid error: %s - %s",
+                response.status_code,
+                response.body,
+            )
             return False, f"SendGrid error: {response.status_code}"
 
     except Exception as e:
-        logger.error(f"❌ Failed to send email: {e}")
+        logger.exception("Failed to send password reset email")
         return False, str(e)

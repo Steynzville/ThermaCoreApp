@@ -2,9 +2,10 @@
 
 import pytest
 from marshmallow import ValidationError
-from app.utils.input_validator import InputValidator
-from app.utils.schemas import UnitSchema, DateTimeField, EnumField
+
 from app.models import UnitStatusEnum
+from app.utils.input_validator import InputValidator
+from app.utils.schemas import DateTimeField, EnumField, UnitSchema
 
 
 class TestValidators:
@@ -48,7 +49,7 @@ class TestValidators:
             "humidity": 60.0,
             "battery_level": 80.0,
             "status": "online",
-            "health_status": "optimal"
+            "health_status": "optimal",
         }
         loaded = schema.load(valid_data)
         assert loaded.temp_outside == 25.0

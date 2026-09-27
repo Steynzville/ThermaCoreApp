@@ -15,13 +15,26 @@ import {
   Search,
   XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { useTenant } from "../../context/TenantContext";
-import alertService, {
-  ALERT_SEVERITY,
-  ALERT_STATUS,
-} from "../../services/alertService";
+import { useUnits } from "../../context/UnitContext";
+import { useScada } from "../../context/ScadaContext";
+import {
+  acknowledgeCondition,
+  conditionStatistics,
+} from "../../services/conditionService";
+const ALERT_SEVERITY = {
+  CRITICAL: "critical",
+  HIGH: "high",
+  WARNING: "warning",
+  INFO: "info",
+};
+const ALERT_STATUS = {
+  OPEN: "open",
+  ACKNOWLEDGED: "acknowledged",
+  RESOLVED: "resolved",
+  ESCALATED: "escalated",
+};
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -44,11 +57,32 @@ import {
 import { Textarea } from "../ui/textarea";
 
 const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
-  const { currentTenant } = useTenant();
-  const { user } = useAuth();
-  const [alerts, setAlerts] = useState([]);
-  const [statistics, setStatistics] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, permissions } = useAuth();
+  const { unit } = useScada();
+  const { alerts: currentAlerts, events, refreshUnits, loading } = useUnits();
+  const alerts = useMemo(() => {
+    const rows = new Map();
+    for (const event of [...events, ...currentAlerts]) {
+      if (
+        String(event.unitId) !== String(unit?.id) ||
+        !["alarm", "alert"].includes(event.category || event.type)
+      )
+        continue;
+      rows.set(event.id, {
+        ...event,
+        type: event.title || event.type || "Condition",
+        device: unit.name,
+        message: event.message || "Cause not supplied by gateway",
+        status: event.status || "open",
+      });
+    }
+    return [...rows.values()].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
+    );
+  }, [unit, currentAlerts, events]);
+  const statistics = conditionStatistics(alerts);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [acknowledgeDialogOpen, setAcknowledgeDialogOpen] = useState(false);
   const [acknowledgmentNotes, setAcknowledgmentNotes] = useState("");
@@ -56,85 +90,25 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
   const [filterStatus, setFilterStatus] = useState("all"); // Changed default from "open" to "all"
   const [searchTerm, setSearchTerm] = useState("");
 
-  const loadAlerts = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Use mock data for development
-      const mockAlerts = alertService.generateMockAlerts(20);
-      setAlerts(mockAlerts);
-    } catch (_error) {
-      // Handle error silently
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const loadStatistics = useCallback(async () => {
-    try {
-      const mockStats = alertService.generateMockAlertStatistics();
-      setStatistics(mockStats);
-    } catch (_error) {
-      // Handle error silently
-    }
-  }, []);
-
-  // Load alerts and statistics
-  useEffect(() => {
-    loadAlerts();
-    loadStatistics();
-
-    // Subscribe to real-time alerts
-    const unsubscribe = alertService.subscribeToAlerts((newAlert) => {
-      setAlerts((prev) => [newAlert, ...prev]);
-      loadStatistics(); // Refresh statistics
-    }, currentTenant?.id);
-
-    // Refresh data periodically
-    const interval = setInterval(() => {
-      loadAlerts();
-      loadStatistics();
-    }, 600000); // Every 10 minutes
-
-    return () => {
-      unsubscribe();
-      clearInterval(interval);
-    };
-  }, [currentTenant?.id, loadAlerts, loadStatistics]);
-
   const handleAcknowledge = async () => {
-    if (!selectedAlert) return;
-
+    if (!selectedAlert || !permissions?.canControlUnits) return;
+    setSaving(true);
+    setError(null);
     try {
-      const result = await alertService.acknowledgeAlert({
-        alertId: selectedAlert.id,
-        userId: user?.id || "current-user",
-        notes: acknowledgmentNotes,
-      });
-
-      if (result.success) {
-        // Update local alert state
-        setAlerts((prev) =>
-          prev.map((alert) =>
-            alert.id === selectedAlert.id
-              ? {
-                  ...alert,
-                  acknowledged: true,
-                  acknowledgedBy: user?.email || "current-user",
-                  acknowledgedAt: new Date().toISOString(),
-                  status: ALERT_STATUS.ACKNOWLEDGED,
-                }
-              : alert,
-          ),
-        );
-        setAcknowledgeDialogOpen(false);
-        setAcknowledgmentNotes("");
-        setSelectedAlert(null);
-      }
-    } catch (_error) {
-      // Handle error silently - dialog closes but alert remains
+      await acknowledgeCondition(
+        unit,
+        selectedAlert,
+        acknowledgmentNotes,
+        user,
+      );
+      await refreshUnits();
       setAcknowledgeDialogOpen(false);
       setAcknowledgmentNotes("");
       setSelectedAlert(null);
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -182,6 +156,7 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
   };
 
   const formatTimeAgo = (timestamp) => {
+    if (!timestamp) return "Time not supplied";
     const now = new Date();
     const then = new Date(timestamp);
     const diff = now - then;
@@ -228,6 +203,7 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
           </div>
         )}
 
+        {error && <p role="alert">{error}</p>}
         {/* Statistics Cards */}
         {statistics && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -287,7 +263,10 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
                       Avg. Resolution
                     </p>
                     <p className="text-2xl font-bold text-foreground dark:text-white">
-                      {statistics.avgResolutionTime}m
+                      {statistics.avgResolutionTime}
+                      {typeof statistics.avgResolutionTime === "number"
+                        ? "m"
+                        : ""}
                     </p>
                   </div>
                   <Clock className="h-8 w-8 text-gray-600 dark:text-gray-400" />
@@ -394,7 +373,7 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
                               {formatTimeAgo(alert.timestamp)}
                             </span>
                             <span>Device: {alert.device}</span>
-                            {alert.value && (
+                            {alert.value != null && (
                               <span>
                                 Value: {alert.value} (Threshold:{" "}
                                 {alert.threshold})
@@ -408,7 +387,8 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
                           )}
                         </div>
                       </div>
-                      {!alert.acknowledged &&
+                      {permissions?.canControlUnits &&
+                        !alert.acknowledged &&
                         alert.status !== ALERT_STATUS.RESOLVED && (
                           <Button
                             size="sm"
@@ -436,6 +416,7 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
         onOpenChange={setAcknowledgeDialogOpen}
       >
         <DialogContent>
+          {error && <p role="alert">{error}</p>}
           <DialogHeader>
             <DialogTitle>Acknowledge Alert</DialogTitle>
             <DialogDescription>
@@ -469,7 +450,9 @@ const AdvancedAlertDashboard = ({ embedded = false, className = "" }) => {
             >
               Cancel
             </Button>
-            <Button onClick={handleAcknowledge}>Acknowledge</Button>
+            <Button onClick={handleAcknowledge} disabled={saving}>
+              Acknowledge
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
