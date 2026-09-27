@@ -653,3 +653,9 @@ class SaleRecord(db.Model):
             "productLine": self.product_line,
             "reference": self.reference,
         }
+
+
+class AccountEntitlement(db.Model):
+    __tablename__ = "account_entitlements"
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    premium_scada = Column(Boolean, default=False, nullable=False)

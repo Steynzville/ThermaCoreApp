@@ -80,7 +80,7 @@ const routes = [
     path: "/alarms",
     component: AlarmsView,
     isProtected: true,
-    roles: ["admin", "client_admin", "user", "operator"],
+    roles: ["admin", "client_admin", "user", "operator", "viewer"],
   },
   {
     path: "/reports",
@@ -136,12 +136,14 @@ const routes = [
   },
   {
     path: "/scada-dashboard",
+    premium: true,
     component: ScadaMainPage,
     isProtected: true,
     roles: [], // Open to all authenticated users (read-only view)
   },
   {
     path: "/realtime-scada",
+    premium: true,
     component: RealtimeScadaDashboard,
     isProtected: true,
     roles: [], // Open to all authenticated users (read-only view)

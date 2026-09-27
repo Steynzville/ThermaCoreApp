@@ -206,7 +206,10 @@ export const AuthProvider = ({ children, value: customValue }) => {
     user,
     userRole, // Frontend role (admin/user) for backward compatibility
     backendRole, // Backend role (admin/operator/viewer) for permission checks
-    permissions, // Permission object for granular access control
+    permissions: {
+      ...permissions,
+      canAccessScada: backendRole === "admin" || user?.premium_scada === true,
+    }, // Permission object for granular access control
     login,
     logout,
     isAuthenticated: !!user,

@@ -9,9 +9,10 @@ const ProtectedRoute = ({
   component: Component,
   componentMap,
   roles = [],
+  premium = false,
   ...props
 }) => {
-  const { isAuthenticated, userRole, backendRole, isLoading } = useAuth();
+  const { isAuthenticated, userRole, backendRole, isLoading, user } = useAuth();
 
   // Show loading spinner while checking authentication state
   if (isLoading) {
@@ -38,7 +39,10 @@ const ProtectedRoute = ({
   const hasAccess =
     roles.length === 0 || roles.includes(backendRole || normalizedRole);
 
-  if (!hasAccess) {
+  if (
+    !hasAccess ||
+    (premium && backendRole !== "admin" && user?.premium_scada !== true)
+  ) {
     return <Navigate to="/dashboard" replace />;
   }
 

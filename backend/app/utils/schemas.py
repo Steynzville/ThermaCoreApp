@@ -149,6 +149,11 @@ class UserSchema(SQLAlchemyAutoSchema):
     client_id = fields.Int(dump_only=True, allow_none=True)
     tenant_id = fields.Int(dump_only=True, allow_none=True)
     is_active = fields.Method("get_is_active")
+    premium_scada = fields.Method("get_premium_scada")
+
+    def get_premium_scada(self, obj):
+        from app.middleware.entitlements import has_scada
+        return has_scada(obj)
 
     def get_is_active(self, obj):
         return getattr(obj, "is_active", True)

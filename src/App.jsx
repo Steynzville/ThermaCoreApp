@@ -225,6 +225,7 @@ const AppContent = () => {
                     component={route.component}
                     componentMap={componentMap}
                     roles={route.roles}
+                    premium={route.premium}
                   />
                 </React.Suspense>
               );

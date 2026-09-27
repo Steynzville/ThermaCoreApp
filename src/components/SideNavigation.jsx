@@ -166,7 +166,7 @@ const EnhancedSideNavigation = () => {
       icon: Activity,
       href: "/scada-dashboard",
       badge: null,
-      requiresPermission: "canViewAnalytics",
+      requiresPermission: "canAccessScada",
     },
     {
       id: "protocol-manager",

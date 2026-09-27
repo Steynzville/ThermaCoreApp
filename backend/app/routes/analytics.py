@@ -494,3 +494,9 @@ def get_alert_patterns(args):
             e,
             "Failed to analyze alert patterns",
         )
+
+
+@analytics_bp.before_request
+def require_premium_analytics():
+    from app.middleware.entitlements import premium_required
+    return premium_required(lambda: None)()

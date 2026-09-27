@@ -355,3 +355,21 @@ def create_sale():
     db.session.add(row)
     db.session.commit()
     return jsonify(row.as_dict()), 201
+
+
+@portfolio_bp.put("/users/<int:user_id>/entitlements/premium-scada")
+@jwt_required()
+@role_required("admin")
+def set_scada_entitlement(user_id):
+    from app import db
+    from app.models import User, AccountEntitlement
+    if db.session.get(User,user_id) is None:
+        return jsonify({"error":"User not found"}),404
+    body=request.get_json(silent=True)
+    if not isinstance(body,dict) or type(body.get("enabled")) is not bool:
+        return jsonify({"error":"Provide enabled boolean"}),400
+    record=db.session.get(AccountEntitlement,user_id) or AccountEntitlement(user_id=user_id)
+    record.premium_scada=body["enabled"]
+    db.session.add(record)
+    db.session.commit()
+    return jsonify({"premium_scada":record.premium_scada})

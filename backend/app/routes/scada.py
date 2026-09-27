@@ -959,3 +959,15 @@ def get_device_status_history():
             "limit": limit,
         },
     )
+
+
+@scada_bp.before_request
+def restrict_installation_scada():
+    from flask import jsonify
+    from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+    from app import db
+    from app.models import User
+    verify_jwt_in_request()
+    user = db.session.get(User, get_jwt_identity())
+    if not user or not user.is_active or not user.role or user.role.name.value != "admin":
+        return jsonify({"error": "System administrator access required for installation protocol services"}), 403
