@@ -78,7 +78,7 @@ jobs:
             --coverage.reporter=lcov \
             --coverage.reporter=html \
             --coverage.reportsDirectory=coverage \
-            --coverage.thresholds.lines=60 \
+            --coverage.thresholds.lines=80 \
             2>&1 | tee coverage_output.txt
 
       - name: Extract Coverage from Output
@@ -88,7 +88,7 @@ jobs:
           echo "📊 Extracting coverage from test output..."
           COVERAGE=$(grep -oP 'All files\s+\|\s+[0-9.]+\s+\|\s+[0-9.]+\s+\|\s+[0-9.]+\s+\|\s+\K[0-9.]+' coverage_output.txt | head -1 || echo "0")
           if [ "$COVERAGE" = "0" ] && [ -f coverage/coverage-summary.json ]; then
-            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct' || echo "0")
+            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct' || echo "0")
           fi
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
           echo "Total coverage extracted: $COVERAGE%"
@@ -139,7 +139,7 @@ jobs:
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           if [ -f coverage/coverage-summary.json ]; then
-            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.statements.pct')
+            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
             COVERAGE_INT=$(echo "$COVERAGE" | cut -d'.' -f1)
             
             if [ "$COVERAGE_INT" -ge 80 ]; then

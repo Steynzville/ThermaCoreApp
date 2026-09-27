@@ -30,7 +30,7 @@ Every tracked Markdown document present at the start of the pass is listed below
 | `docs/TROUBLESHOOTING.md` | Updated | Actual configuration names, route/status behavior and missing-integration states |
 | `docs/Copyright (c) 2026 ThermaCore Renewable Technologies Pty Ltd.md` | Reviewed and retained unchanged | Proprietary notice; conflicting old backend MIT claim removed |
 
-Added current shared guides: `ARCHITECTURE_AND_INTEGRATIONS.md` and `TESTING.md`, plus this audit inventory. No application source is excluded from coverage as part of this documentation audit.
+Added current shared guides: `ARCHITECTURE_AND_INTEGRATIONS.md` and `TESTING.md`, plus this audit inventory and `QUALITY_VALIDATION.md` for reproducible verification evidence. No application source is excluded from coverage as part of this documentation audit.
 
 ## Corrections that matter operationally
 
