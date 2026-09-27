@@ -690,3 +690,24 @@ class UnitCondition(db.Model):
                 "status": "resolved" if self.resolved_at else "acknowledged" if self.acknowledged_at else "open",
                 "acknowledged": self.acknowledged_at is not None, "acknowledgedBy": self.acknowledged_by,
                 "acknowledgedAt": stamp(self.acknowledged_at), "notes": self.notes}
+
+
+class ExternalIdentity(db.Model):
+    __tablename__ = "external_identities"
+    provider = Column(String(20), primary_key=True)
+    subject = Column(String(255), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+
+class OAuthTransaction(db.Model):
+    __tablename__ = "oauth_transactions"
+    state_hash = Column(String(64), primary_key=True)
+    provider = Column(String(20), nullable=False)
+    challenge = Column(String(64), nullable=False)
+    nonce = Column(String(128), nullable=False)
+    verifier = Column(String(128), nullable=False)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="pending")
+    link_user_id = Column(Integer, ForeignKey("users.id"))
+    subject = Column(String(255))
+    ticket_hash = Column(String(64), unique=True)

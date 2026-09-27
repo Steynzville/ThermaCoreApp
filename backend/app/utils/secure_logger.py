@@ -155,6 +155,12 @@ class SecureLogger:
             return data
 
         sensitive_keys = {
+            "code",
+            "state",
+            "nonce",
+            "verifier",
+            "code_verifier",
+            "id_token",
             "password",
             "passwd",
             "pwd",

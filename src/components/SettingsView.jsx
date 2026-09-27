@@ -8,6 +8,7 @@ import DataRefreshSettings from "./settings/DataRefreshSettings";
 import DisplaySettings from "./settings/DisplaySettings";
 import NotificationSettings from "./settings/NotificationSettings";
 import ProfileSettings from "./settings/ProfileSettings";
+import ConnectedAccounts from "./settings/ConnectedAccounts";
 import { Button } from "./ui/button";
 
 const SettingsView = ({ className }) => {
@@ -96,6 +97,7 @@ const SettingsView = ({ className }) => {
 
         <div className="space-y-6">
           <ProfileSettings />
+          <ConnectedAccounts />
           <NotificationSettings
             settings={settings}
             handleSettingChange={handleSettingChange}

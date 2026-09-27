@@ -26,6 +26,7 @@ def register_all_blueprints(app: Any, logger: logging.Logger) -> tuple[int, int]
     # Define all blueprints to register
     blueprints = [
         ("app.routes.auth", "auth_bp", "auth"),
+        ("app.routes.external_auth", "external_auth_bp", "external_auth"),
         ("app.routes.units", "units_bp", "units"),
         ("app.routes.portfolio", "portfolio_bp", "portfolio"),
         ("app.routes.users", "users_bp", "users"),

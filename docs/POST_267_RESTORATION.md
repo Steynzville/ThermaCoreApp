@@ -89,3 +89,13 @@ Validation: production build and 3 calculation regression tests pass, including 
 ## Integrated validation follow-up
 
 The first full frontend run passed 1,772 tests and found 21 failures in three files. Seventeen were an outdated icon mock after the four-output addition; navigation assertions needed the explicit premium permission. Fixed a real integration issue: fresh-login mapping dropped premium_scada, while logout should retain the original null-permissions state. All 77 tests in the three affected files now pass. No tests were removed or meaningful assertions weakened.
+
+## Completed checkpoint 12: Google and Apple authentication
+
+Replaced Google/Apple placeholder dialogs with real OIDC authorization-code flows. Backend verifies provider signature, issuer, audience, expiry, nonce and authorized party; state and browser-PKCE handoffs are single-use. JWTs never appear in redirect URLs. Existing active/approved-account rules apply. Providers are linked to a stable subject through Settings after current-password confirmation, rather than trusting an email coincidence. Login visuals/buttons remain unchanged. Biometric/passkey integration is the next auth stage.
+
+Required external configuration (not supplied or fabricated): AUTH_FRONTEND_URL (frontend origin), OAUTH_GOOGLE_CLIENT_ID, OAUTH_GOOGLE_CLIENT_SECRET, OAUTH_GOOGLE_REDIRECT_URI; OAUTH_APPLE_CLIENT_ID (Services ID), OAUTH_APPLE_CLIENT_SECRET (Apple developer-signed client-secret JWT, rotated before expiry), OAUTH_APPLE_REDIRECT_URI. Register callbacks exactly as https://BACKEND/api/v1/auth/oauth/google/callback and .../apple/callback with the corresponding provider. Apple uses form_post. Use HTTPS; localhost HTTP is permitted only for local development. First link a provider in Settings, then use it on Login. An unconfigured provider reports the exact missing configuration keys, never mock success.
+
+Primary provider references: https://developers.google.com/identity/openid-connect/openid-connect ; https://developers.google.com/identity/gsi/web/guides/verify-google-id-token ; https://developer.apple.com/documentation/signinwithapple/verifying-a-user .
+
+Validation: production build, 33 Login tests and 4 backend OAuth tests pass. Tests verify both provider flows, real RSA JWT claim/signature validation, wrong browser verifier, state/ticket replay, required password for linking and missing configuration. Real provider end-to-end sign-in requires the above deployment credentials.

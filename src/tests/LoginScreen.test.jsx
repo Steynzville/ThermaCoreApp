@@ -1,9 +1,21 @@
-import { fireEvent, render, screen, waitFor, act } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import LoginScreen from "../components/LoginScreen";
 import { AuthProvider } from "../context/AuthContext";
 import * as authService from "../services/authService";
+
+const providerSignIn = vi.hoisted(() => vi.fn());
+vi.mock("../services/externalAuthService", () => ({
+  startProviderSignIn: providerSignIn,
+  finishProviderSignIn: vi.fn(),
+}));
 
 // Mock react-router-dom
 const mockNavigate = vi.fn();
@@ -72,7 +84,7 @@ describe("LoginScreen", () => {
       result = render(
         <TestWrapper>
           <LoginScreen error="" setError={vi.fn()} {...props} />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     return result;
@@ -177,7 +189,7 @@ describe("LoginScreen", () => {
     it("should block submit and show an error when fields are empty", () => {
       const mockSetError = vi.fn();
       const loginSpy = vi.spyOn(authService, "login");
-      
+
       renderComponent({ error: "", setError: mockSetError });
 
       // Submit the form directly using fireEvent.submit
@@ -294,7 +306,12 @@ describe("LoginScreen", () => {
     it("should navigate to dashboard on successful login", async () => {
       vi.spyOn(authService, "login").mockResolvedValue({
         success: true,
-        user: { id: 1, username: "admin", role: "admin", email: "admin@test.com" },
+        user: {
+          id: 1,
+          username: "admin",
+          role: "admin",
+          email: "admin@test.com",
+        },
         token: "test-token",
         message: "Login successful",
       });
@@ -378,7 +395,11 @@ describe("LoginScreen", () => {
         expect(screen.getByRole("img", { name: "Icon" })).toBeInTheDocument();
       });
 
-      resolveLogin({ success: true, token: "test-token", user: { id: 1, username: "admin", role: "admin" } });
+      resolveLogin({
+        success: true,
+        token: "test-token",
+        user: { id: 1, username: "admin", role: "admin" },
+      });
 
       await waitForInDocument(() => {
         expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
@@ -542,35 +563,20 @@ describe("LoginScreen", () => {
   // PROVIDER DIALOGS ('COMING SOON') TESTS
   // ============================================================
   describe("Provider dialogs ('coming soon')", () => {
-    // ✅ FIX: Already has proper async handling
-    it("should show a coming-soon dialog for Google sign-in", async () => {
-      renderComponent({ error: "", setError: vi.fn() });
-
-      act(() => {
-        fireEvent.click(screen.getByText("Sign in with Google"));
-      });
-
-      await waitForInDocument(() => {
+    it.each(["Google", "Apple"])(
+      "starts the configured %s authorization flow",
+      async (provider) => {
+        providerSignIn.mockResolvedValue(undefined);
+        renderComponent({ error: "", setError: vi.fn() });
+        fireEvent.click(screen.getByText(`Sign in with ${provider}`));
+        await waitForInDocument(() =>
+          expect(providerSignIn).toHaveBeenCalledWith(provider),
+        );
         expect(
-          screen.getByText(/Google sign-in is coming soon/i),
-        ).toBeInTheDocument();
-      });
-    });
-
-    // ✅ FIX: Already has proper async handling
-    it("should show a coming-soon dialog for Apple sign-in", async () => {
-      renderComponent({ error: "", setError: vi.fn() });
-
-      act(() => {
-        fireEvent.click(screen.getByText("Sign in with Apple"));
-      });
-
-      await waitForInDocument(() => {
-        expect(
-          screen.getByText(/Apple sign-in is coming soon/i),
-        ).toBeInTheDocument();
-      });
-    });
+          screen.queryByText(/sign-in is coming soon/i),
+        ).not.toBeInTheDocument();
+      },
+    );
 
     // ✅ FIX: Already has proper async handling
     it("should show a coming-soon dialog for biometric sign-in", async () => {
@@ -590,31 +596,21 @@ describe("LoginScreen", () => {
       });
     });
 
-    // ✅ FIX: Already has proper async handling
-    it("should close dialog when Close button is clicked", async () => {
-      renderComponent({ error: "", setError: vi.fn() });
-
-      act(() => {
-        fireEvent.click(screen.getByText("Sign in with Google"));
-      });
-      
-      await waitForInDocument(() => {
-        expect(
-          screen.getByText(/Google sign-in is coming soon/i),
-        ).toBeInTheDocument();
-      });
-
-      const closeButtons = screen.getAllByText("Close");
-      const closeButton = closeButtons[0];
-      act(() => {
-        fireEvent.click(closeButton);
-      });
-
-      await waitForInDocument(() => {
-        expect(
-          screen.queryByText(/Google sign-in is coming soon/i),
-        ).not.toBeInTheDocument();
-      });
+    it("shows a provider configuration failure without simulating login", async () => {
+      const setError = vi.fn();
+      providerSignIn.mockRejectedValue(
+        new Error(
+          "Missing authentication configuration: OAUTH_GOOGLE_CLIENT_ID",
+        ),
+      );
+      renderComponent({ error: "", setError });
+      fireEvent.click(screen.getByText("Sign in with Google"));
+      await waitForInDocument(() =>
+        expect(setError).toHaveBeenCalledWith(
+          "Missing authentication configuration: OAUTH_GOOGLE_CLIENT_ID",
+        ),
+      );
+      expect(mockNavigate).not.toHaveBeenCalledWith("/dashboard");
     });
   });
 
