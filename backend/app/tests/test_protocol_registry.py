@@ -144,3 +144,11 @@ def test_collect_protocol_status_duplicates_and_non_dict_adapter(app):
             assert len(statuses) == 1
             assert statuses[0]["name"] == "mqtt"
             assert statuses[0]["status"] == "healthy"
+
+
+# These adapter tests explicitly exercise the demonstration-only legacy drivers.
+import pytest as _demo_pytest
+
+@_demo_pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

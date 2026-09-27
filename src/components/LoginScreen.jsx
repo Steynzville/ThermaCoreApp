@@ -158,7 +158,7 @@ const LoginScreen = ({ error, setError }) => {
   const callbackStarted = useRef(false);
   useEffect(() => {
     if (callbackStarted.current) return;
-    const params = new URLSearchParams(window.location.hash.slice(1));
+    const params = new URLSearchParams((window.location.hash || "").slice(1));
     const code = params.get("auth_code"),
       failure = params.get("auth_error");
     if (!code && !failure) return;

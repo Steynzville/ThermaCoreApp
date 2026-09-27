@@ -544,3 +544,11 @@ def test_convert_protocol_data(client, admin_token):
     )
     assert res_bad.status_code == 400
     assert "not supported" in res_bad.get_json()["error"]
+
+
+# These adapter tests explicitly exercise the demonstration-only legacy drivers.
+import pytest as _demo_pytest
+
+@_demo_pytest.fixture(autouse=True)
+def explicit_demo_driver_configuration(app, monkeypatch):
+    monkeypatch.setitem(app.config, "DEMO_DATA_ENABLED", True)

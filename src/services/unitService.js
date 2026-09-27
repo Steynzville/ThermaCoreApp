@@ -139,6 +139,18 @@ export async function controlUnit(unit, changes) {
         updated.powerSetpoint = 0;
       }
     }
+    updated.usefulHeat =
+      updated.status === "online"
+        ? (unit.demoNominalHeat ?? unit.usefulHeat)
+        : 0;
+    updated.usefulChill =
+      updated.status === "online"
+        ? (unit.demoNominalChill ?? unit.usefulChill)
+        : 0;
+    updated.waterRate =
+      updated.status === "online" && updated.waterProductionOn
+        ? (unit.demoNominalWater ?? unit.waterRate)
+        : 0;
     demoOverrides.set(String(unit.id), updated);
     const action = {
       id: `action-${Date.now()}`,

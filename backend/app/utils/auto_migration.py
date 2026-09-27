@@ -7,6 +7,8 @@ missing columns and creates them via raw SQL when needed.
 
 import json
 import logging
+import os
+from app.utils.data_mode import demo_enabled
 
 from sqlalchemy import inspect, text
 
@@ -1024,6 +1026,12 @@ def seed_client_admin_data(engine):
     Returns:
         bool: True if seeding was successful, False on error
     """
+    if not demo_enabled():
+        return True
+    demo_password = os.getenv("DEMO_CLIENT_ADMIN_PASSWORD")
+    if not demo_password or len(demo_password) < 12:
+        logger.error("Demo seeding requires DEMO_CLIENT_ADMIN_PASSWORD of at least 12 characters")
+        return False
     try:
         with engine.begin() as conn:
             # 1. Create client_admin role if not exists
@@ -1095,7 +1103,7 @@ def seed_client_admin_data(engine):
                 if not first_tenant_id and t_res:
                     first_tenant_id = t_res[0]
 
-            # 4. Create Client Admin user: clientadmin@thermacore.com / clientadmin123 (client_id: 1)
+            # 4. Create the explicitly enabled demo client administrator.
             user_res = conn.execute(
                 text(
                     "SELECT id FROM users WHERE email = 'clientadmin@thermacore.com' OR username = 'client_admin' OR username = 'clientadmin'",
@@ -1105,7 +1113,7 @@ def seed_client_admin_data(engine):
                 from werkzeug.security import generate_password_hash
 
                 password_hash = generate_password_hash(
-                    "clientadmin123",
+                    demo_password,
                     method="pbkdf2:sha256",
                 )
                 client_admin_permissions = json.dumps(

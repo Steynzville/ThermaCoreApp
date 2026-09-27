@@ -12,7 +12,13 @@
  *  - Retry-still-fails and recovery toast branches
  */
 
-import { cleanup, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { act } from "react";
 import { BrowserRouter } from "react-router-dom";
@@ -20,6 +26,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 
 // ============================================================
+vi.mock("../config/runtime", () => ({
+  get isDemoMode() {
+    return import.meta.env.VITE_DATA_MODE !== "live";
+  },
+}));
 // Mock ALL child components and dependencies
 // ============================================================
 
@@ -28,7 +39,9 @@ vi.mock("../components/protocol/DNP3MonitoringDashboard", () => ({
     isOpen ? (
       <div data-testid="dnp3-dashboard">
         DNP3 Dashboard
-        <button data-testid="dnp3-dashboard-close" onClick={onClose}>Close</button>
+        <button data-testid="dnp3-dashboard-close" onClick={onClose}>
+          Close
+        </button>
       </div>
     ) : null,
 }));
@@ -38,8 +51,12 @@ vi.mock("../components/protocol/ModbusDeviceModal", () => ({
     isOpen ? (
       <div data-testid="modbus-modal">
         Modbus Device {device ? device.device_id : ""}
-        <button data-testid="modbus-modal-close" onClick={onClose}>Close</button>
-        <button data-testid="modbus-modal-update" onClick={onUpdate}>Update</button>
+        <button data-testid="modbus-modal-close" onClick={onClose}>
+          Close
+        </button>
+        <button data-testid="modbus-modal-update" onClick={onUpdate}>
+          Update
+        </button>
       </div>
     ) : null,
 }));
@@ -49,7 +66,9 @@ vi.mock("../components/protocol/MQTTManagementPanel", () => ({
     isOpen ? (
       <div data-testid="mqtt-panel">
         MQTT Management
-        <button data-testid="mqtt-panel-close" onClick={onClose}>Close</button>
+        <button data-testid="mqtt-panel-close" onClick={onClose}>
+          Close
+        </button>
       </div>
     ) : null,
 }));
@@ -59,7 +78,9 @@ vi.mock("../components/protocol/OPCUANodeBrowser", () => ({
     isOpen ? (
       <div data-testid="opcua-browser">
         OPC UA Browser
-        <button data-testid="opcua-browser-close" onClick={onClose}>Close</button>
+        <button data-testid="opcua-browser-close" onClick={onClose}>
+          Close
+        </button>
       </div>
     ) : null,
 }));
@@ -69,8 +90,12 @@ vi.mock("../components/protocol/ProtocolWizard", () => ({
     isOpen ? (
       <div data-testid="protocol-wizard">
         Protocol Wizard
-        <button data-testid="wizard-close" onClick={onClose}>Close</button>
-        <button data-testid="wizard-success" onClick={onSuccess}>Success</button>
+        <button data-testid="wizard-close" onClick={onClose}>
+          Close
+        </button>
+        <button data-testid="wizard-success" onClick={onSuccess}>
+          Success
+        </button>
       </div>
     ) : null,
 }));
@@ -78,12 +103,21 @@ vi.mock("../components/protocol/ProtocolWizard", () => ({
 // Mock UI components
 vi.mock("../components/ui/badge", () => ({
   Badge: ({ children, variant }) => (
-    <span data-testid="badge" data-variant={variant}>{children}</span>
+    <span data-testid="badge" data-variant={variant}>
+      {children}
+    </span>
   ),
 }));
 
 vi.mock("../components/ui/button", () => ({
-  Button: ({ children, onClick, disabled, "aria-label": ariaLabel, className, "data-testid": testId }) => (
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    "aria-label": ariaLabel,
+    className,
+    "data-testid": testId,
+  }) => (
     <button
       data-testid={testId || "button"}
       onClick={onClick}
@@ -98,7 +132,9 @@ vi.mock("../components/ui/button", () => ({
 
 vi.mock("../components/ui/card", () => ({
   Card: ({ children }) => <div data-testid="card">{children}</div>,
-  CardContent: ({ children }) => <div data-testid="card-content">{children}</div>,
+  CardContent: ({ children }) => (
+    <div data-testid="card-content">{children}</div>
+  ),
   CardHeader: ({ children }) => <div data-testid="card-header">{children}</div>,
   CardTitle: ({ children }) => <div data-testid="card-title">{children}</div>,
 }));
@@ -108,19 +144,32 @@ vi.mock("../components/ui/dialog", () => ({
     open ? (
       <div data-testid="dialog">
         {children}
-        <button data-testid="dialog-scrim-close" onClick={() => onOpenChange?.(false)}>
+        <button
+          data-testid="dialog-scrim-close"
+          onClick={() => onOpenChange?.(false)}
+        >
           Scrim
         </button>
       </div>
     ) : null,
-  DialogContent: ({ children }) => <div data-testid="dialog-content">{children}</div>,
-  DialogHeader: ({ children }) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }) => <div data-testid="dialog-title">{children}</div>,
-  DialogDescription: ({ children }) => <div data-testid="dialog-description">{children}</div>,
+  DialogContent: ({ children }) => (
+    <div data-testid="dialog-content">{children}</div>
+  ),
+  DialogHeader: ({ children }) => (
+    <div data-testid="dialog-header">{children}</div>
+  ),
+  DialogTitle: ({ children }) => (
+    <div data-testid="dialog-title">{children}</div>
+  ),
+  DialogDescription: ({ children }) => (
+    <div data-testid="dialog-description">{children}</div>
+  ),
 }));
 
 vi.mock("../components/ui/input", () => ({
-  Input: (props) => <input data-testid={props.id ? `input-${props.id}` : "input"} {...props} />,
+  Input: (props) => (
+    <input data-testid={props.id ? `input-${props.id}` : "input"} {...props} />
+  ),
 }));
 
 vi.mock("../components/ui/label", () => ({
@@ -129,9 +178,13 @@ vi.mock("../components/ui/label", () => ({
 
 vi.mock("../components/ui/select", () => ({
   Select: ({ children }) => <div data-testid="select">{children}</div>,
-  SelectContent: ({ children }) => <div data-testid="select-content">{children}</div>,
+  SelectContent: ({ children }) => (
+    <div data-testid="select-content">{children}</div>
+  ),
   SelectItem: ({ children }) => <div data-testid="select-item">{children}</div>,
-  SelectTrigger: ({ children }) => <div data-testid="select-trigger">{children}</div>,
+  SelectTrigger: ({ children }) => (
+    <div data-testid="select-trigger">{children}</div>
+  ),
   SelectValue: () => <span data-testid="select-value">Modbus</span>,
 }));
 
@@ -182,7 +235,12 @@ const liveApiResponse = (overrides = {}) => ({
       status: "error",
       error: { code: "CONNECTION_REFUSED", message: "Server unreachable" },
     },
-    modbus: { name: "modbus", available: true, connected: true, status: "ready" },
+    modbus: {
+      name: "modbus",
+      available: true,
+      connected: true,
+      status: "ready",
+    },
     dnp3: { name: "dnp3", available: true, connected: true, status: "ready" },
     simulator: {
       name: "simulator",
@@ -221,11 +279,13 @@ describe("MultiProtocolManager - Role-based access control", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
 
-    expect(screen.queryByText(/Multi-Protocol Manager/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Multi-Protocol Manager/i),
+    ).not.toBeInTheDocument();
   });
 
   it("allows admin users to view the component", async () => {
@@ -240,11 +300,13 @@ describe("MultiProtocolManager - Role-based access control", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
 
-    expect(await screen.findByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Multi-Protocol Manager/i),
+    ).toBeInTheDocument();
   });
 });
 
@@ -255,7 +317,7 @@ describe("MultiProtocolManager - basic rendering (mock mode)", () => {
       const result = render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
       container = result.container;
     });
@@ -267,7 +329,7 @@ describe("MultiProtocolManager - basic rendering (mock mode)", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     expect(screen.getByTestId("loading-state")).toBeInTheDocument();
@@ -279,7 +341,7 @@ describe("MultiProtocolManager - basic rendering (mock mode)", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     const title = await screen.findByText(/Multi-Protocol Manager/i);
@@ -291,7 +353,7 @@ describe("MultiProtocolManager - basic rendering (mock mode)", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -305,7 +367,7 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -360,7 +422,7 @@ describe("MultiProtocolManager - summary cards & protocol grid (mock mode)", () 
     await user.click(connectButton);
     expect(toast.success).toHaveBeenCalledWith(
       "Connecting to OPCUA...",
-      expect.objectContaining({ duration: 2000 })
+      expect.objectContaining({ duration: 2000 }),
     );
   });
 });
@@ -372,7 +434,7 @@ describe("MultiProtocolManager - protocol configuration modals", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -406,7 +468,9 @@ describe("MultiProtocolManager - protocol configuration modals", () => {
   it("opens the simulator configuration dialog from the simulator card", async () => {
     const user = await setup();
     await user.click(screen.getByTestId("configure-simulator"));
-    expect(await screen.findByText("Simulator Configuration")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Simulator Configuration"),
+    ).toBeInTheDocument();
   });
 
   it("opens the Protocol Wizard from the floating add-device button", async () => {
@@ -427,7 +491,7 @@ describe("MultiProtocolManager - modal callbacks", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -492,7 +556,9 @@ describe("MultiProtocolManager - modal callbacks", () => {
     await user.click(screen.getByTestId("configure-simulator"));
     await screen.findByText("Simulator Configuration");
     await user.click(screen.getByTestId("dialog-scrim-close"));
-    expect(screen.queryByText("Simulator Configuration")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Simulator Configuration"),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -503,7 +569,7 @@ describe("MultiProtocolManager - simulator configuration dialog", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -528,9 +594,13 @@ describe("MultiProtocolManager - simulator configuration dialog", () => {
       );
     });
 
-    expect(screen.queryByText("Simulator Configuration")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Simulator Configuration"),
+    ).not.toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByTestId("metric-active_unit_states")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("metric-active_unit_states"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -554,14 +624,18 @@ describe("MultiProtocolManager - simulator configuration dialog", () => {
     await user.click(saveButtons[0]);
 
     await waitFor(() => {
-      expect(screen.getByTestId("metric-sensor_types_count")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("metric-sensor_types_count"),
+      ).toBeInTheDocument();
     });
   });
 
   it("closes without changes when Cancel is clicked", async () => {
     const user = await openSimulatorDialog();
     await user.click(screen.getByText("Cancel"));
-    expect(screen.queryByText("Simulator Configuration")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Simulator Configuration"),
+    ).not.toBeInTheDocument();
     expect(toast.success).not.toHaveBeenCalledWith(
       "Simulator configuration updated successfully.",
     );
@@ -575,7 +649,7 @@ describe("MultiProtocolManager - refresh", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -597,7 +671,7 @@ describe("MultiProtocolManager - refresh", () => {
 
 describe("MultiProtocolManager - live mode success", () => {
   beforeEach(() => {
-    vi.stubEnv("VITE_MOCK_MODE", "false");
+    vi.stubEnv("VITE_DATA_MODE", "live");
     vi.stubEnv("DEV", "");
   });
 
@@ -608,7 +682,7 @@ describe("MultiProtocolManager - live mode success", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
 
@@ -623,7 +697,11 @@ describe("MultiProtocolManager - live mode success", () => {
   it("shows 0% connection rate when there are no protocols", async () => {
     apiGetJson.mockResolvedValueOnce(
       liveApiResponse({
-        summary: { total_protocols: 0, active_protocols: 0, supported_protocols: [] },
+        summary: {
+          total_protocols: 0,
+          active_protocols: 0,
+          supported_protocols: [],
+        },
         protocols: {},
       }),
     );
@@ -632,7 +710,7 @@ describe("MultiProtocolManager - live mode success", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
 
@@ -643,7 +721,7 @@ describe("MultiProtocolManager - live mode success", () => {
 
 describe("MultiProtocolManager - live mode failure & retry", () => {
   beforeEach(() => {
-    vi.stubEnv("VITE_MOCK_MODE", "false");
+    vi.stubEnv("VITE_DATA_MODE", "live");
     vi.stubEnv("DEV", "");
   });
 
@@ -654,13 +732,17 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
 
     expect(await screen.findByTestId("error-state")).toBeInTheDocument();
     expect(screen.getByText("Failed to Load")).toBeInTheDocument();
-    expect(screen.getByText(/Failed to retrieve protocol status after \d+ attempts\./i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Failed to retrieve protocol status after \d+ attempts\./i,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows the Reload Page button only in live mode", async () => {
@@ -669,7 +751,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByTestId("error-state");
@@ -690,7 +772,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByTestId("error-state");
@@ -713,13 +795,13 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
 
     await screen.findByTestId("error-state");
 
-    const tryAgainButton = screen.getByRole('button', { name: /Try Again/i });
+    const tryAgainButton = screen.getByRole("button", { name: /Try Again/i });
     await user.click(tryAgainButton);
 
     await waitFor(() => {
@@ -732,7 +814,11 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
     apiGetJson.mockRejectedValue(new Error("still down"));
 
     act(() => {
-      render(<TestWrapper><MultiProtocolManager /></TestWrapper>);
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>,
+      );
     });
     await screen.findByTestId("error-state");
 
@@ -747,10 +833,16 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
   it("shows the backoff countdown text once an error has occurred", async () => {
     apiGetJson.mockRejectedValue(new Error("boom"));
     act(() => {
-      render(<TestWrapper><MultiProtocolManager /></TestWrapper>);
+      render(
+        <TestWrapper>
+          <MultiProtocolManager />
+        </TestWrapper>,
+      );
     });
     await screen.findByTestId("error-state");
-    expect(screen.getByText(/Next automatic retry in \d+ seconds/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Next automatic retry in \d+ seconds/i),
+    ).toBeInTheDocument();
   });
 
   // ✅ REMOVED: "shows a 'loaded successfully' toast on recovery after prior errors"
@@ -768,18 +860,21 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
 
     await screen.findByTestId("error-state");
 
-    const tryAgainButton = screen.getByRole('button', { name: /Try Again/i });
+    const tryAgainButton = screen.getByRole("button", { name: /Try Again/i });
     await user.click(tryAgainButton);
 
-    await waitFor(() => {
-      expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
+      },
+      { timeout: 3000 },
+    );
 
     expect(screen.getByText(/Multi-Protocol Manager/i)).toBeInTheDocument();
     expect(apiGetJson).toHaveBeenCalledTimes(2);
@@ -792,7 +887,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -817,7 +912,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
 
@@ -836,7 +931,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await waitFor(() => {
@@ -854,7 +949,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await waitFor(() => {
@@ -872,7 +967,7 @@ describe("MultiProtocolManager - live mode failure & retry", () => {
 
 describe("MultiProtocolManager - available (not connected, no error) status branch", () => {
   beforeEach(() => {
-    vi.stubEnv("VITE_MOCK_MODE", "false");
+    vi.stubEnv("VITE_DATA_MODE", "live");
     vi.stubEnv("DEV", "");
   });
 
@@ -880,16 +975,25 @@ describe("MultiProtocolManager - available (not connected, no error) status bran
     apiGetJson.mockResolvedValueOnce(
       liveApiResponse({
         protocols: {
-          mqtt: { name: "mqtt", available: true, connected: false, status: "idle" },
+          mqtt: {
+            name: "mqtt",
+            available: true,
+            connected: false,
+            status: "idle",
+          },
         },
-        summary: { total_protocols: 1, active_protocols: 0, supported_protocols: ["mqtt"] },
+        summary: {
+          total_protocols: 1,
+          active_protocols: 0,
+          supported_protocols: ["mqtt"],
+        },
       }),
     );
     act(() => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -904,7 +1008,7 @@ describe("MultiProtocolManager - page visibility", () => {
       render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
     });
     await screen.findByText(/Multi-Protocol Manager/i);
@@ -915,7 +1019,9 @@ describe("MultiProtocolManager - page visibility", () => {
     });
     document.dispatchEvent(new Event("visibilitychange"));
 
-    expect(await screen.findByText("Paused (tab inactive)")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Paused (tab inactive)"),
+    ).toBeInTheDocument();
   });
 
   it("unmounts cleanly without throwing", async () => {
@@ -924,7 +1030,7 @@ describe("MultiProtocolManager - page visibility", () => {
       const result = render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
       unmount = result.unmount;
     });
@@ -942,7 +1048,7 @@ describe("MultiProtocolManager - polling", () => {
   beforeEach(() => {
     // Use real timers, not fake timers
     vi.useRealTimers();
-    vi.stubEnv("VITE_MOCK_MODE", "false");
+    vi.stubEnv("VITE_DATA_MODE", "live");
     vi.stubEnv("DEV", "");
     // Clear any previous mock calls
     apiGetJson.mockReset();
@@ -959,7 +1065,7 @@ describe("MultiProtocolManager - polling", () => {
   });
 
   it("schedules a background poll after the initial load", async () => {
-    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = vi.spyOn(global, "setTimeout");
     apiGetJson.mockResolvedValue(liveApiResponse());
 
     let unmount;
@@ -967,7 +1073,7 @@ describe("MultiProtocolManager - polling", () => {
       const result = render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
       unmount = result.unmount;
     });
@@ -976,11 +1082,11 @@ describe("MultiProtocolManager - polling", () => {
     await screen.findByText(/Multi-Protocol Manager/i);
 
     // Wait a moment for the component to settle
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Check that setTimeout was called with a polling interval
     const pollingCalls = setTimeoutSpy.mock.calls.filter(
-      call => typeof call[0] === 'function' && call[1] >= 10000
+      (call) => typeof call[0] === "function" && call[1] >= 10000,
     );
 
     // Should have at least one polling timeout scheduled
@@ -994,7 +1100,7 @@ describe("MultiProtocolManager - polling", () => {
   }, 5000);
 
   it("increases backoff interval after consecutive errors", async () => {
-    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = vi.spyOn(global, "setTimeout");
 
     let callCount = 0;
     apiGetJson.mockImplementation(() => {
@@ -1010,7 +1116,7 @@ describe("MultiProtocolManager - polling", () => {
       const result = render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
       unmount = result.unmount;
     });
@@ -1021,13 +1127,13 @@ describe("MultiProtocolManager - polling", () => {
     // Wait for the first poll to actually be scheduled
     await waitFor(() => {
       const calls = setTimeoutSpy.mock.calls.filter(
-        (call) => typeof call[0] === 'function' && call[1] >= 10000,
+        (call) => typeof call[0] === "function" && call[1] >= 10000,
       );
       expect(calls.length).toBeGreaterThan(0);
     });
 
     let pollingCalls = setTimeoutSpy.mock.calls.filter(
-      (call) => typeof call[0] === 'function' && call[1] >= 10000,
+      (call) => typeof call[0] === "function" && call[1] >= 10000,
     );
 
     // The first delay should be 10000
@@ -1041,14 +1147,14 @@ describe("MultiProtocolManager - polling", () => {
     // Wait for the error to be processed and a new, backed-off timeout to be scheduled.
     await waitFor(() => {
       const calls = setTimeoutSpy.mock.calls.filter(
-        (call) => typeof call[0] === 'function' && call[1] >= 10000,
+        (call) => typeof call[0] === "function" && call[1] >= 10000,
       );
       expect(calls.length).toBeGreaterThan(1);
     });
 
     // Get all polling timeouts now
     const allPollingCalls = setTimeoutSpy.mock.calls.filter(
-      (call) => typeof call[0] === 'function' && call[1] >= 10000,
+      (call) => typeof call[0] === "function" && call[1] >= 10000,
     );
 
     // The first delay should still be 10000
@@ -1064,7 +1170,7 @@ describe("MultiProtocolManager - polling", () => {
   }, 5000);
 
   it("caps backoff at 60 seconds", async () => {
-    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = vi.spyOn(global, "setTimeout");
 
     let callCount = 0;
     apiGetJson.mockImplementation(() => {
@@ -1080,7 +1186,7 @@ describe("MultiProtocolManager - polling", () => {
       const result = render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
       unmount = result.unmount;
     });
@@ -1092,7 +1198,7 @@ describe("MultiProtocolManager - polling", () => {
     // that reads from the spy.
     await waitFor(() => {
       const calls = setTimeoutSpy.mock.calls.filter(
-        (call) => typeof call[0] === 'function' && call[1] >= 10000,
+        (call) => typeof call[0] === "function" && call[1] >= 10000,
       );
       expect(calls.length).toBeGreaterThan(0);
     });
@@ -1102,7 +1208,7 @@ describe("MultiProtocolManager - polling", () => {
     let previousCallCount = 0;
     for (let i = 0; i < 8; i++) {
       const pollingCalls = setTimeoutSpy.mock.calls.filter(
-        (call) => typeof call[0] === 'function' && call[1] >= 10000,
+        (call) => typeof call[0] === "function" && call[1] >= 10000,
       );
 
       if (pollingCalls.length <= previousCallCount) {
@@ -1121,14 +1227,14 @@ describe("MultiProtocolManager - polling", () => {
       // Wait for the next timeout to be scheduled before looping again.
       await waitFor(() => {
         const calls = setTimeoutSpy.mock.calls.filter(
-          (call) => typeof call[0] === 'function' && call[1] >= 10000,
+          (call) => typeof call[0] === "function" && call[1] >= 10000,
         );
         expect(calls.length).toBeGreaterThan(previousCallCount);
       });
     }
 
     const finalPollingCalls = setTimeoutSpy.mock.calls.filter(
-      (call) => typeof call[0] === 'function' && call[1] >= 10000,
+      (call) => typeof call[0] === "function" && call[1] >= 10000,
     );
 
     const lastDelay = finalPollingCalls[finalPollingCalls.length - 1][1];
@@ -1141,7 +1247,7 @@ describe("MultiProtocolManager - polling", () => {
   }, 5000);
 
   it("skips polling when the tab is hidden", async () => {
-    const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
+    const setTimeoutSpy = vi.spyOn(global, "setTimeout");
     apiGetJson.mockResolvedValue(liveApiResponse());
 
     let unmount;
@@ -1149,7 +1255,7 @@ describe("MultiProtocolManager - polling", () => {
       const result = render(
         <TestWrapper>
           <MultiProtocolManager />
-        </TestWrapper>
+        </TestWrapper>,
       );
       unmount = result.unmount;
     });
@@ -1161,7 +1267,7 @@ describe("MultiProtocolManager - polling", () => {
     // a clean state right before the visibility change.
     await waitFor(() => {
       const calls = setTimeoutSpy.mock.calls.filter(
-        (call) => typeof call[0] === 'function' && call[1] >= 10000,
+        (call) => typeof call[0] === "function" && call[1] >= 10000,
       );
       expect(calls.length).toBeGreaterThan(0);
     });
@@ -1177,11 +1283,11 @@ describe("MultiProtocolManager - polling", () => {
     document.dispatchEvent(new Event("visibilitychange"));
 
     // Wait a moment for the component to react
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // No new setTimeout calls should be scheduled for polling
     const pollingCalls = setTimeoutSpy.mock.calls.filter(
-      call => typeof call[0] === 'function' && call[1] >= 10000
+      (call) => typeof call[0] === "function" && call[1] >= 10000,
     );
 
     // There should be no new polling calls after hiding the tab

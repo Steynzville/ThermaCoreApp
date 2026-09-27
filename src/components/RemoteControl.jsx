@@ -40,7 +40,7 @@ const ConnectionPill = ({ isConnected }) =>
   isConnected ? (
     <div className="flex items-center space-x-2 text-green-600 dark:text-green-400">
       <Wifi className="h-4 w-4" />
-      <span className="text-sm font-medium">Connected</span>
+      <span className="text-sm font-medium">Gateway configured</span>
     </div>
   ) : (
     <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
@@ -398,7 +398,7 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
                     Current water level:{" "}
-                    {(unit?.awgWaterLevel ?? unit?.water_level !== undefined)
+                    {(unit?.awgWaterLevel ?? unit?.water_level) != null
                       ? `${unit.awgWaterLevel ?? unit.water_level} L`
                       : "N/A"}
                   </p>
@@ -640,7 +640,7 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                       Current Level
                     </p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                      {(unit?.awgWaterLevel ?? unit?.water_level !== undefined)
+                      {(unit?.awgWaterLevel ?? unit?.water_level) != null
                         ? `${unit.awgWaterLevel ?? unit.water_level} L`
                         : "N/A"}
                     </p>
@@ -820,7 +820,7 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                   <p
                     className={`text-sm font-semibold ${isConnected ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
                   >
-                    {isConnected ? "Connected" : "Offline"}
+                    {isConnected ? "Gateway configured" : "Offline"}
                   </p>
                 </div>
                 <div className="text-center p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">

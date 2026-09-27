@@ -32,7 +32,16 @@ export async function getScadaHistory(unit, period = "24h", now = new Date()) {
       ((Math.floor((start + index * interval) / interval) + seed) % 9) / 100;
     const row = { unitId: unit.id, timestamp, source: "demo" };
     for (const [, key] of historyMetrics) {
-      const value = key === "power" ? unit.demoNominalPower : unit[key];
+      const value =
+        key === "power"
+          ? unit.demoNominalPower
+          : key === "usefulHeat"
+            ? (unit.demoNominalHeat ?? unit[key])
+            : key === "usefulChill"
+              ? (unit.demoNominalChill ?? unit[key])
+              : key === "waterRate"
+                ? (unit.demoNominalWater ?? unit[key])
+                : unit[key];
       row[key] = value == null ? null : Number(value) * factor;
     }
     return row;

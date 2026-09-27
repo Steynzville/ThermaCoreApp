@@ -40,6 +40,10 @@ export const demoUnits = fixtures.map((unit, i) =>
     tenantName: demoTenants[i].name,
     source: "demo",
     demoNominalPower: unit.currentPower || 3 + i,
+    demoNominalHeat: i % 3 === 0 ? 4.5 + i : 0,
+    demoNominalChill: i % 3 === 1 ? 2.5 + i : 0,
+    demoNominalWater:
+      i % 3 !== 1 && (unit.watergeneration || i === 3) ? 1.9 : 0,
     capitalCost: { "Power-Box": 45000, "Power-Plus": 585384, Titan: 1463460 }[
       unit.productLine
     ],

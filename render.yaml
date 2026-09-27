@@ -17,6 +17,8 @@ services:
         generateValue: true
       - key: JWT_SECRET_KEY
         generateValue: true
+      - key: DEMO_DATA_ENABLED
+        value: "false"
       - key: DEBUG
         value: "false"
       - key: FLASK_ENV

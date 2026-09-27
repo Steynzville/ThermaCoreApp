@@ -79,6 +79,7 @@ const { authState } = vi.hoisted(() => {
 
 const { mockUseSettings } = vi.hoisted(() => ({
   mockUseSettings: vi.fn(() => ({
+    updateSettings: vi.fn(),
     settings: { soundEnabled: true, volume: 0.5 },
   })),
 }));
@@ -420,6 +421,7 @@ beforeEach(() => {
   vi.useRealTimers();
 
   mockUseSettings.mockReturnValue({
+    updateSettings: vi.fn(),
     settings: { soundEnabled: true, volume: 0.5 },
   });
 
@@ -830,6 +832,7 @@ describe("App", () => {
 
   it("does not play sound when soundEnabled is false", async () => {
     mockUseSettings.mockReturnValue({
+      updateSettings: vi.fn(),
       settings: { soundEnabled: false, volume: 0.5 },
     });
     const playSound = (await import("../utils/audioPlayer")).default;

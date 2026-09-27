@@ -38,13 +38,13 @@ def get_scada_status():
     """
     status = {}
 
-    if hasattr(current_app, "mqtt_client"):
+    if getattr(current_app, "mqtt_client", None) is not None:
         status["mqtt"] = current_app.mqtt_client.get_status()
 
-    if hasattr(current_app, "websocket_service"):
+    if getattr(current_app, "websocket_service", None) is not None:
         status["websocket"] = current_app.websocket_service.get_status()
 
-    if hasattr(current_app, "realtime_processor"):
+    if getattr(current_app, "realtime_processor", None) is not None:
         status["realtime_processor"] = current_app.realtime_processor.get_status()
 
     return jsonify(status)
@@ -68,9 +68,9 @@ def mqtt_connect():
         description: Connection failed
     """
     try:
-        if hasattr(current_app, "mqtt_client"):
+        if getattr(current_app, "mqtt_client", None) is not None:
             current_app.mqtt_client.connect()
-            return jsonify({"status": "connected"})
+            return jsonify({"status": "connected" if current_app.mqtt_client.connected is True else "connecting"})
         return SecurityAwareErrorHandler.handle_service_unavailable("MQTT client")
     except Exception as e:
         return SecurityAwareErrorHandler.handle_mqtt_error(e, "connection")
@@ -92,7 +92,7 @@ def mqtt_disconnect():
         description: MQTT disconnection successful
     """
     try:
-        if hasattr(current_app, "mqtt_client"):
+        if getattr(current_app, "mqtt_client", None) is not None:
             current_app.mqtt_client.disconnect()
             return jsonify({"status": "disconnected"})
         return SecurityAwareErrorHandler.handle_service_unavailable("MQTT client")
@@ -147,7 +147,7 @@ def mqtt_subscribe():
         topic = data["topic"]
         qos = data.get("qos", 0)
 
-        if hasattr(current_app, "mqtt_client"):
+        if getattr(current_app, "mqtt_client", None) is not None:
             current_app.mqtt_client.subscribe_topic(topic, qos)
             return jsonify({"status": "subscribed", "topic": topic})
         return SecurityAwareErrorHandler.handle_service_unavailable("MQTT client")
@@ -207,7 +207,7 @@ def mqtt_publish():
         payload = data["payload"]
         qos = data.get("qos", 0)
 
-        if hasattr(current_app, "mqtt_client"):
+        if getattr(current_app, "mqtt_client", None) is not None:
             success = current_app.mqtt_client.publish_message(topic, payload, qos)
             if success:
                 return jsonify({"status": "published", "topic": topic})
@@ -240,7 +240,7 @@ def get_alert_rules():
           items:
             type: object
     """
-    if hasattr(current_app, "realtime_processor"):
+    if getattr(current_app, "realtime_processor", None) is not None:
         rules = current_app.realtime_processor.get_alert_rules()
         return jsonify(rules)
     return SecurityAwareErrorHandler.handle_service_unavailable(
@@ -304,7 +304,7 @@ def add_alert_rule():
                 "Alert rule creation",
             )
 
-        if hasattr(current_app, "realtime_processor"):
+        if getattr(current_app, "realtime_processor", None) is not None:
             current_app.realtime_processor.add_alert_rule(
                 sensor_type=data["sensor_type"],
                 condition=data["condition"],
@@ -348,7 +348,7 @@ def get_websocket_clients():
         schema:
           type: object
     """
-    if hasattr(current_app, "websocket_service"):
+    if getattr(current_app, "websocket_service", None) is not None:
         clients = current_app.websocket_service.get_connected_clients()
         return jsonify(clients)
     return SecurityAwareErrorHandler.handle_service_unavailable("WebSocket service")
@@ -817,12 +817,12 @@ def get_all_devices_status():
     devices_status = []
 
     # Get device status from Modbus service
-    if hasattr(current_app, "modbus_service"):
+    if getattr(current_app, "modbus_service", None):
         modbus_devices = current_app.modbus_service.get_device_status()
         devices_status.extend(modbus_devices.get("devices", {}).values())
 
     # Get device status from DNP3 service
-    if hasattr(current_app, "dnp3_service"):
+    if getattr(current_app, "dnp3_service", None):
         dnp3_devices = current_app.dnp3_service.get_device_status()
         devices_status.extend(dnp3_devices.get("devices", {}).values())
 
@@ -873,13 +873,13 @@ def get_device_status(device_id):
 
     """
     # Try to find device in Modbus service first
-    if hasattr(current_app, "modbus_service"):
+    if getattr(current_app, "modbus_service", None):
         modbus_status = current_app.modbus_service.get_device_status(device_id)
         if modbus_status and modbus_status.get("devices", {}).get(device_id):
             return jsonify(modbus_status["devices"][device_id])
 
     # Try DNP3 service
-    if hasattr(current_app, "dnp3_service"):
+    if getattr(current_app, "dnp3_service", None):
         dnp3_status = current_app.dnp3_service.get_device_status(device_id)
         if dnp3_status and dnp3_status.get("devices", {}).get(device_id):
             return jsonify(dnp3_status["devices"][device_id])
@@ -925,40 +925,14 @@ def get_device_status_history():
 
     """
     device_id = request.args.get("device_id")
-    limit = min(int(request.args.get("limit", 50)), 1000)  # Cap at 1000
+    limit = min(request.args.get("limit", 50, type=int), 1000)  # Cap at 1000
 
-    # For now, return mock data - in a real implementation, this would come from a database
-    mock_history = [
-        {
-            "device_id": device_id or "TC001",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "status_change": "online -> offline",
-            "event": "Connection Lost",
-            "severity": "critical",
-        },
-        {
-            "device_id": device_id or "TC001",
-            "timestamp": (
-                datetime.now(timezone.utc) - timedelta(minutes=30)
-            ).isoformat(),
-            "status_change": "offline -> online",
-            "event": "Connection Restored",
-            "severity": "info",
-        },
-    ]
-
-    filtered_history = mock_history
+    from app.models import Unit, UnitCondition
+    query = UnitCondition.query
     if device_id:
-        filtered_history = [h for h in mock_history if h["device_id"] == device_id]
-
-    return jsonify(
-        {
-            "history": filtered_history[:limit],
-            "total_records": len(filtered_history),
-            "device_id": device_id,
-            "limit": limit,
-        },
-    )
+        query = query.filter_by(unit_id=device_id)
+    count = query.count()
+    return jsonify({"history": [row.as_event() for row in query.order_by(UnitCondition.opened_at.desc()).limit(max(1, limit)).all()], "total_records": count, "device_id": device_id, "limit": limit})
 
 
 @scada_bp.before_request
@@ -971,3 +945,7 @@ def restrict_installation_scada():
     user = db.session.get(User, get_jwt_identity())
     if not user or not user.is_active or not user.role or user.role.name.value != "admin":
         return jsonify({"error": "System administrator access required for installation protocol services"}), 403
+
+    from app.utils.data_mode import demo_enabled
+    if any(part in request.path.split("/") for part in ("modbus", "dnp3", "simulator")) and not demo_enabled():
+        return jsonify({"error": "Legacy protocol simulators are disabled in live mode. Configure a real telemetry or acknowledged control gateway."}), 503
