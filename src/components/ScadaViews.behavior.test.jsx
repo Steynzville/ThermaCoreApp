@@ -1,22 +1,17 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
-import ScadaMainPage from "./ScadaMainPage";
-import PerformanceAnalyticsDashboard from "./analytics/PerformanceAnalyticsDashboard";
-import AdvancedAlertDashboard from "./alerts/AdvancedAlertDashboard";
 import { ScadaProvider } from "../context/ScadaContext";
+import { acknowledgeCondition } from "../services/conditionService";
+import { generatePortfolioReport } from "../services/portfolioReportService";
 import { getScadaHistory } from "../services/scadaHistoryService";
 import { getPortfolioHistory } from "../services/unitService";
 import { apiGetJson } from "../utils/apiFetch";
-import { acknowledgeCondition } from "../services/conditionService";
-import { generatePortfolioReport } from "../services/portfolioReportService";
+import AdvancedAlertDashboard from "./alerts/AdvancedAlertDashboard";
+import PerformanceAnalyticsDashboard from "./analytics/PerformanceAnalyticsDashboard";
+import ScadaMainPage from "./ScadaMainPage";
+
 const state = vi.hoisted(() => ({ portfolio: {}, auth: {} }));
 vi.mock("../context/UnitContext", () => ({ useUnits: () => state.portfolio }));
 vi.mock("../context/AuthContext", () => ({ useAuth: () => state.auth }));

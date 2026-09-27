@@ -1,10 +1,11 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
-import ConnectedAccounts from "./ConnectedAccounts";
-import { apiGetJson, apiFetch } from "../../utils/apiFetch";
 import { startProviderSignIn } from "../../services/externalAuthService";
 import { registerPasskey } from "../../services/passkeyService";
+import { apiFetch, apiGetJson } from "../../utils/apiFetch";
+import ConnectedAccounts from "./ConnectedAccounts";
+
 vi.mock("../../utils/apiFetch", () => ({
   apiGetJson: vi.fn(),
   apiFetch: vi.fn(),

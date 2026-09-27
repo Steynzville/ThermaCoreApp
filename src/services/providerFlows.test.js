@@ -1,17 +1,18 @@
 import { webcrypto } from "node:crypto";
-import { beforeEach, afterEach, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { apiPostJson } from "../utils/apiFetch";
 import {
-  startProviderSignIn,
-  finishProviderSignIn,
   finishAuthSession,
+  finishProviderSignIn,
+  startProviderSignIn,
 } from "./externalAuthService";
 import {
+  decodePasskey,
+  encodePasskey,
   registerPasskey,
   signInWithPasskey,
-  encodePasskey,
-  decodePasskey,
 } from "./passkeyService";
+
 vi.mock("../utils/apiFetch", () => ({ apiPostJson: vi.fn() }));
 let assign, replace, create, get;
 beforeEach(() => {
