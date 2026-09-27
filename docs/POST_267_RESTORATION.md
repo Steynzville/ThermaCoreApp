@@ -140,3 +140,5 @@ Login audit also identified a missing SendGrid installation for password-reset d
 
 Final full frontend validation at this checkpoint: 1,725 tests pass, with all-source line coverage 65.07% (required 60%). Full backend after dependency/format updates: 1,401 pass, 12 skipped, coverage 86.76%; the additional password-reset configuration regression is validated separately. Production build and bundle security check pass. Frontend dependency audit: zero findings. Backend dependency audit: only the explicitly documented unpatched OPC UA advisory.
 The final authentication/email/output-contract regression run passes all 74 tests, including the new configuration failure case. Frozen frontend dependency installation passes.
+
+GitHub PR validation exposed the old CI pnpm 10.4.1 ignoring workspace overrides written by pnpm 11. The package manager is now pinned to 11.25.0 in package.json and CI, preserving frozen-lockfile installation and security overrides rather than bypassing that gate. Node minimum reflects the upgraded toolchain.
