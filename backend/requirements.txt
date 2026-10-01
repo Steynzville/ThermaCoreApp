@@ -13,7 +13,7 @@ SQLAlchemy==2.0.35
 
 # Authentication and security
 bcrypt==4.2.1
-PyJWT==2.13.0
+PyJWT==2.15.0
 webauthn==2.7.1
 sendgrid==6.12.5
 Pillow==12.3.0
@@ -54,7 +54,7 @@ flask-socketio==5.4.1
 
 # Optional OPC UA support
 opcua==0.98.13
-cryptography==50.0.1
+cryptography==50.0.2
 pyopenssl==26.4.0
 
 # Phase 3: Machine Learning and Analytics Dependencies
