@@ -1,10 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   put: vi.fn(),
   fetch: vi.fn(),
   update: vi.fn(),
+  prepare: vi.fn(),
+}));
+vi.mock("../../utils/prepareAvatarFile", () => ({
+  prepareAvatarFile: mocks.prepare,
 }));
 vi.mock("../../utils/apiFetch", () => ({
   apiGetJson: mocks.get,
@@ -14,7 +19,9 @@ vi.mock("../../utils/apiFetch", () => ({
 vi.mock("../../context/AuthContext", () => ({
   useAuth: () => ({ updateAccountProfile: mocks.update }),
 }));
+
 import ProfileSettings from "./ProfileSettings";
+
 const profile = {
   username: "viewer",
   firstName: "Alex",
@@ -27,6 +34,7 @@ describe("account profile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.get.mockResolvedValue({ profile });
+    mocks.prepare.mockImplementation(async (file) => file);
   });
   it("loads the actual profile and persists edits without sending authorization fields", async () => {
     mocks.put.mockResolvedValue({
@@ -80,5 +88,54 @@ describe("account profile", () => {
     });
     await screen.findByAltText("Your profile");
     expect(mocks.fetch.mock.calls[0][1].body.get("avatar")).toBe(file);
+  });
+  it("retries a failed profile load and restores the upload form", async () => {
+    mocks.get.mockRejectedValueOnce(
+      new Error("Account temporarily unavailable"),
+    );
+    render(<ProfileSettings />);
+    await screen.findByRole("alert");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Retry loading profile" }),
+    );
+    await screen.findByLabelText(/Profile picture/);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+  it("keeps the applied picture after upload failure", async () => {
+    mocks.get.mockResolvedValue({
+      profile: { ...profile, avatarDataUrl: "data:image/png;base64,old" },
+    });
+    mocks.fetch.mockRejectedValueOnce(new Error("Upload unavailable"));
+    render(<ProfileSettings />);
+    await screen.findByAltText("Your profile");
+    fireEvent.change(screen.getByLabelText(/Profile picture/), {
+      target: {
+        files: [new File(["pixels"], "new.png", { type: "image/png" })],
+      },
+    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Upload unavailable",
+    );
+    expect(screen.getByAltText("Your profile")).toHaveAttribute(
+      "src",
+      "data:image/png;base64,old",
+    );
+    expect(mocks.update).not.toHaveBeenCalled();
+    expect(screen.queryByText("Profile saved.")).not.toBeInTheDocument();
+  });
+  it("removes a saved picture only after server success", async () => {
+    mocks.get.mockResolvedValue({
+      profile: { ...profile, avatarDataUrl: "data:image/png;base64,old" },
+    });
+    mocks.fetch.mockResolvedValue({ json: async () => ({ profile }) });
+    render(<ProfileSettings />);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Remove picture" }),
+    );
+    await screen.findByText("Profile saved.");
+    expect(mocks.fetch).toHaveBeenCalledWith("/api/v1/account/avatar", {
+      method: "DELETE",
+    });
+    expect(screen.queryByAltText("Your profile")).not.toBeInTheDocument();
   });
 });

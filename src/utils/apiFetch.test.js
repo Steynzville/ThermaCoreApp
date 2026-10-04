@@ -1,8 +1,10 @@
 vi.mock("../config/runtime", () => ({ apiUrl: (path) => path }));
+
 /**
  * apiFetch.test.js - Complete Test Coverage for API Fetch Utility
  */
 
+import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   apiDelete,
@@ -16,7 +18,6 @@ import {
   apiPutJson,
   apiUpload,
 } from "./apiFetch";
-import { toast } from "sonner";
 
 // ============================================================
 // MOCKS
@@ -101,9 +102,11 @@ const mockSignal = {
   removeEventListener: vi.fn(),
   onabort: null,
 };
-const mockAbortController = vi.fn().mockImplementation(function () {
-  return { abort: mockAbort, signal: mockSignal };
-});
+const mockAbortController = vi
+  .fn()
+  .mockImplementation(function MockAbortController() {
+    return { abort: mockAbort, signal: mockSignal };
+  });
 
 // Store original AbortController to restore after tests
 const originalAbortController = global.AbortController;
@@ -478,6 +481,44 @@ describe("apiFetch - Core Functionality", () => {
         "Field 'name' is required",
       );
     });
+
+    it.each([
+      [
+        {
+          error: {
+            code: "ACCOUNT_ERROR",
+            message: "Please retry your account request",
+          },
+        },
+        "Please retry your account request",
+      ],
+      [
+        { error: { code: "UNKNOWN" }, detail: { field: "invalid" } },
+        "HTTP 400: Bad Request",
+      ],
+      [
+        { error: { code: "UNKNOWN" }, message: "Account unavailable" },
+        "Account unavailable",
+      ],
+      [null, "HTTP 400: Bad Request"],
+    ])(
+      "uses readable error text for structured responses %j",
+      async (body, message) => {
+        mockFetch.mockResolvedValue({
+          ok: false,
+          status: 400,
+          statusText: "Bad Request",
+          json: async () => body,
+        });
+        await expect(apiFetch("/api/v1/account/settings")).rejects.toThrow(
+          message,
+        );
+        expect(toast.error).toHaveBeenCalledWith(message);
+        expect(toast.error).not.toHaveBeenCalledWith(
+          expect.objectContaining({ code: expect.any(String) }),
+        );
+      },
+    );
 
     it("should handle malformed error response JSON", async () => {
       mockFetch.mockResolvedValue({

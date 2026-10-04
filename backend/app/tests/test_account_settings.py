@@ -89,6 +89,13 @@ def test_avatar_decode_reencode_limits_and_own_account(
     assert response.json["profile"]["avatarDataUrl"].startswith(
         "data:image/png;base64,",
     )
+    # A fresh request must read the persisted image, not only the upload response.
+    assert client.get("/api/v1/account/settings", headers=headers).json["profile"][
+        "avatarDataUrl"
+    ] == response.json["profile"]["avatarDataUrl"]
+    assert client.get(
+        "/api/v1/account/settings", headers=p["headers"]["operator"]
+    ).json["profile"]["avatarDataUrl"] is None
     assert client.delete("/api/v1/account/avatar", headers=headers).status_code == 200
     assert (
         client.get("/api/v1/account/settings", headers=headers).json["profile"][
