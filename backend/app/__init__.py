@@ -243,13 +243,7 @@ def create_app(config_name=None):
     # ============================================
     CORS(
         app,
-        origins=[
-            "https://thermacoreapp.netlify.app",
-            "https://*.netlify.app",
-            "https://thermacoreapp.onrender.com",
-            "http://localhost:3000",
-            "http://localhost:5173",
-        ],
+        origins=app.config["CORS_ORIGINS"],
         supports_credentials=True,
         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
