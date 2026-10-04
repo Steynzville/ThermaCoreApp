@@ -57,6 +57,6 @@ Scheduling persists a future report configuration. Execution occurs while Report
 
 ## Settings and administration
 
-Settings saves your own username, display/name fields, avatar, sound/volume, temperature display, theme and polling interval. Profile images must be PNG/JPEG/WebP, ≤2 MB and ≤4 megapixels; the server re-encodes a thumbnail. Email/roles/tenant assignment are not editable account preferences. Connected accounts and passkeys require password confirmation. Password changes use your current password.
+Settings saves your own username, display/name fields, avatar, sound/volume, temperature display, theme and polling interval. Choose a PNG/JPEG/WebP profile picture up to 20 MB. The browser automatically resizes it before upload; the server validates and re-encodes a thumbnail, then stores it in your account database. The API upload limit remains 2 MB and four megapixels. A failed profile load offers Retry loading profile. Email/roles/tenant assignment are not editable account preferences. Connected accounts and passkeys require password confirmation. Password changes use your current password.
 
 User Management remains a separate system-admin function for account approval and administrative changes. A client administrator's tenant access does not grant the global User Management screen. Premium entitlement is separately administered. If access changes, reload/re-authenticate as directed; do not alter browser storage to bypass a server permission decision.

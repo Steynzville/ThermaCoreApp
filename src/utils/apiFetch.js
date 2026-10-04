@@ -1,8 +1,7 @@
 // Enhanced API fetch utility with 401 handling, toast notifications, and improved error/redirect handling
 import { toast } from "sonner";
-
-import { getAuthTokenWithSource } from "./authToken";
 import { apiUrl } from "../config/runtime";
+import { getAuthTokenWithSource } from "./authToken";
 
 // Pre-convert network error patterns to lowercase for performance optimization
 // This avoids repeated toLowerCase() calls during error checking
@@ -149,13 +148,18 @@ export const apiFetch = async (
 
         try {
           const errorData = await response.json();
-          if (errorData.error) {
-            errorMessage = errorData.error;
-          } else if (errorData.message) {
-            errorMessage = errorData.message;
-          } else if (errorData.detail) {
-            errorMessage = errorData.detail;
-          }
+          // APIs return both legacy strings and structured error envelopes.
+          // Never coerce an object into an Error message or a toast.
+          const candidates = [
+            errorData?.error?.message,
+            errorData?.error,
+            errorData?.message,
+            errorData?.detail,
+          ];
+          const readable = candidates.find(
+            (value) => typeof value === "string" && value.trim(),
+          );
+          if (readable) errorMessage = readable;
         } catch (_e) {
           // Unable to parse error response, use default message
         }
