@@ -71,8 +71,9 @@ def execute_control(unit, controls, user_id):
             "powerSetpoint": 0,
             "waterSetpoint": 0,
         }
-    elif not state["machinePower"] and any(
-        controls.get(k) for k in allowed - {"machinePower"}
+    elif not state["machinePower"] and (
+        any(controls.get(k) for k in allowed - {"machinePower"})
+        or any(k in controls for k in balance_outputs)
     ):
         raise ControlError(
             "Cannot enable production on an offline unit. Turn on machine power first.",
