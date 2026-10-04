@@ -109,7 +109,7 @@ def execute_control(unit, controls, user_id):
         if key in controls:
             if not capable or key not in gateway.get("balance_fields", []):
                 raise ControlError(
-                    "Operating balance is not configured for this output."
+                    "Operating balance is not configured for this output.",
                 )
             if controls[key] > 100:
                 raise ControlError("Operating balance must be between 0 and 100.")
