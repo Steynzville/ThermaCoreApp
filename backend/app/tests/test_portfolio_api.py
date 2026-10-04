@@ -376,38 +376,67 @@ def test_control_modes_and_public_capabilities(
     assert denied.status_code == 400
 
 
-@pytest.mark.parametrize('field,capability', [
-    ('powerHeatBalance', 'supports_heat'),
-    ('powerWaterBalance', 'supports_water'),
-    ('powerChillBalance', 'supports_chill'),
-])
+@pytest.mark.parametrize(
+    "field,capability",
+    [
+        ("powerHeatBalance", "supports_heat"),
+        ("powerWaterBalance", "supports_water"),
+        ("powerChillBalance", "supports_chill"),
+    ],
+)
 def test_operating_balances_require_capability_configuration_and_ack(
-    app, client, portfolio_data, monkeypatch, field, capability,
+    app,
+    client,
+    portfolio_data,
+    monkeypatch,
+    field,
+    capability,
 ):
     p = portfolio_data
-    unit = p['units'][0]
+    unit = p["units"][0]
     setattr(unit, capability, True)
     db.session.commit()
-    gateway = {'url': 'https://device.example.test/control', 'balance_fields': [field]}
-    monkeypatch.setitem(app.config, 'UNIT_CONTROL_GATEWAYS', {unit.id: gateway})
+    gateway = {"url": "https://device.example.test/control", "balance_fields": [field]}
+    monkeypatch.setitem(app.config, "UNIT_CONTROL_GATEWAYS", {unit.id: gateway})
+
     def ack(*args, **kwargs):
-        return Mock(json=lambda: {**kwargs['json'], 'acknowledged': True}, raise_for_status=lambda: None)
-    with patch('app.services.unit_controls.requests.post', side_effect=ack) as dispatch:
-        for value in (-1, 101, True, '50'):
-            response = client.post(f'/api/v1/remote-control/units/{unit.id}/controls', headers=p['headers']['operator'], json={field: value})
+        return Mock(
+            json=lambda: {**kwargs["json"], "acknowledged": True},
+            raise_for_status=lambda: None,
+        )
+
+    with patch("app.services.unit_controls.requests.post", side_effect=ack) as dispatch:
+        for value in (-1, 101, True, "50"):
+            response = client.post(
+                f"/api/v1/remote-control/units/{unit.id}/controls",
+                headers=p["headers"]["operator"],
+                json={field: value},
+            )
             assert response.status_code == 400
         assert dispatch.call_count == 0
         for value in (0, 50, 100, 67):
-            response = client.post(f'/api/v1/remote-control/units/{unit.id}/controls', headers=p['headers']['operator'], json={field: value})
+            response = client.post(
+                f"/api/v1/remote-control/units/{unit.id}/controls",
+                headers=p["headers"]["operator"],
+                json={field: value},
+            )
             assert response.status_code == 200, response.json
-            assert response.json['unit']['controls'][field] == value
+            assert response.json["unit"]["controls"][field] == value
         assert dispatch.call_count == 4
-        gateway['balance_fields'] = []
-        response = client.post(f'/api/v1/remote-control/units/{unit.id}/controls', headers=p['headers']['operator'], json={field: 50})
+        gateway["balance_fields"] = []
+        response = client.post(
+            f"/api/v1/remote-control/units/{unit.id}/controls",
+            headers=p["headers"]["operator"],
+            json={field: 50},
+        )
         assert response.status_code == 400
-        gateway['balance_fields'] = [field]
+        gateway["balance_fields"] = [field]
         setattr(unit, capability, False)
         db.session.commit()
-        response = client.post(f'/api/v1/remote-control/units/{unit.id}/controls', headers=p['headers']['operator'], json={field: 50})
+        response = client.post(
+            f"/api/v1/remote-control/units/{unit.id}/controls",
+            headers=p["headers"]["operator"],
+            json={field: 50},
+        )
         assert response.status_code == 400
         assert dispatch.call_count == 4
