@@ -1,17 +1,21 @@
-import { useEffect, useState } from "react";
 import { User } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { apiGetJson, apiPutJson, apiFetch } from "../../utils/apiFetch";
-import { Card, CardContent, CardHeader } from "../ui/card";
+import { apiFetch, apiGetJson, apiPutJson } from "../../utils/apiFetch";
+import { prepareAvatarFile } from "../../utils/prepareAvatarFile";
 import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader } from "../ui/card";
 export default function ProfileSettings() {
   const { updateAccountProfile } = useAuth();
   const [profile, setProfile] = useState(null),
+    [loadAttempt, setLoadAttempt] = useState(0),
     [error, setError] = useState(null),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry intentionally triggers a fresh profile request.
   useEffect(() => {
     let alive = true;
+    setError(null);
     apiGetJson("/api/v1/account/settings")
       .then((result) => {
         if (alive) setProfile(result.profile);
@@ -22,7 +26,7 @@ export default function ProfileSettings() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadAttempt]);
   const run = async (action) => {
     setBusy(true);
     setError(null);
@@ -47,21 +51,17 @@ export default function ProfileSettings() {
       }),
     );
   };
-  const upload = (event) => {
+  const upload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      setError("Profile images must be at most 2 MB.");
-      return;
-    }
-    const body = new FormData();
-    body.append("avatar", file);
-    run(async () =>
-      (
-        await apiFetch("/api/v1/account/avatar", { method: "POST", body })
-      ).json(),
-    );
     event.target.value = "";
+    await run(async () => {
+      const body = new FormData();
+      body.append("avatar", await prepareAvatarFile(file));
+      return (
+        await apiFetch("/api/v1/account/avatar", { method: "POST", body })
+      ).json();
+    });
   };
   return (
     <Card className="bg-white dark:bg-gray-900">
@@ -82,7 +82,7 @@ export default function ProfileSettings() {
               />
             )}
             <label htmlFor="profile-avatar" className="block">
-              Profile picture (PNG, JPEG or WebP; up to 2 MB)
+              Profile picture (PNG, JPEG or WebP; up to 20 MB)
             </label>
             <input
               id="profile-avatar"
@@ -90,7 +90,11 @@ export default function ProfileSettings() {
               accept="image/png,image/jpeg,image/webp"
               disabled={busy}
               onChange={upload}
+              className="block w-full min-w-0 text-sm file:mr-3 file:rounded-md file:border-0 file:px-3 file:py-2"
             />
+            <p className="text-xs text-muted-foreground">
+              Your picture is resized and saved to your account automatically.
+            </p>
             {profile.avatarDataUrl && (
               <Button
                 type="button"
@@ -162,6 +166,14 @@ export default function ProfileSettings() {
         )}
         {!profile && !error && <p role="status">Loading profile…</p>}
         {error && <p role="alert">{error}</p>}
+        {!profile && error && (
+          <Button
+            variant="outline"
+            onClick={() => setLoadAttempt((value) => value + 1)}
+          >
+            Retry loading profile
+          </Button>
+        )}
         {message && <p role="status">{message}</p>}
       </CardContent>
     </Card>
