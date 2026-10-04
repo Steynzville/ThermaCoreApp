@@ -138,7 +138,7 @@ it("keeps advanced visualization, analytics and alerts distinct and updates deep
     "Electrical Power",
     "Useful Heating",
     "Useful Chilling",
-    "Potable Water Production",
+    "Potable AWG Water Production",
   ])
     expect(screen.getByText(name)).toBeInTheDocument();
   await user.click(screen.getByRole("button", { name: "Trends" }));

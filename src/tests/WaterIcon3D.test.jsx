@@ -10,7 +10,7 @@ describe("WaterIcon3D", () => {
       // Should render the SVG icon
       const svg = document.querySelector('svg[role="img"]');
       expect(svg).toBeInTheDocument();
-      expect(svg).toHaveAttribute("aria-label", "Water production status");
+      expect(svg).toHaveAttribute("aria-label", "AWG Water production status");
       
       // Should render the water level badge
       expect(screen.getByText("0")).toBeInTheDocument();
@@ -31,7 +31,7 @@ describe("WaterIcon3D", () => {
       
       const title = document.querySelector('svg title');
       expect(title).toBeInTheDocument();
-      expect(title).toHaveTextContent("Water production status");
+      expect(title).toHaveTextContent("AWG Water production status");
     });
   });
 
@@ -342,7 +342,7 @@ describe("WaterIcon3D", () => {
       render(<WaterIcon3D waterLevel={5} />);
       
       const svg = document.querySelector('svg[role="img"]');
-      expect(svg).toHaveAttribute('aria-label', 'Water production status');
+      expect(svg).toHaveAttribute('aria-label', 'AWG Water production status');
     });
 
     it("has title element for screen readers", () => {
@@ -350,7 +350,7 @@ describe("WaterIcon3D", () => {
       
       const title = document.querySelector('svg title');
       expect(title).toBeInTheDocument();
-      expect(title).toHaveTextContent('Water production status');
+      expect(title).toHaveTextContent('AWG Water production status');
     });
   });
 

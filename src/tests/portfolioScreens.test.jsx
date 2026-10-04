@@ -118,7 +118,7 @@ it("disables all controls for a viewer", () => {
   auth.permissions.canControlUnits = false;
   render(<RemoteControl unit={unit} />);
   expect(screen.getByRole("switch", { name: "Machine Power" })).toBeDisabled();
-  expect(screen.getByText("Apply power setpoint")).toBeDisabled();
+  expect(screen.getByText("Edit Set-point")).toBeDisabled();
 });
 it("does not accept foreign unit data smuggled in route state", () => {
   render(

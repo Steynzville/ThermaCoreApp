@@ -8,19 +8,19 @@ import {
   Minimize,
   Monitor,
   Power,
-  RotateCcw,
   Settings,
-  Sliders,
   Wifi,
   WifiOff,
 } from "lucide-react";
-import React, { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate, useInRouterContext } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useInRouterContext, useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { useSettings } from "../context/SettingsContext";
-import playSound from "../utils/audioPlayer";
 import { useUnits } from "../context/UnitContext";
+import playSound from "../utils/audioPlayer";
+import { unitOutputs } from "../utils/unitOutputs";
+import OperatingBalanceControls from "./OperatingBalanceControls";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,17 +57,12 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
   const [pending, setPending] = useState(false),
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
-  const [powerSetpoint, setPowerSetpoint] = useState(unit.powerSetpoint ?? 0);
-  const [awgSetpoint, setAwgSetpoint] = useState(unit.waterSetpoint ?? 0);
   const machineOn = unit.machinePower ?? unit.status === "online";
   const waterProductionOn = Boolean(unit.waterProductionOn),
     autoSwitchEnabled = Boolean(unit.autoSwitchEnabled);
-  const operationMode = unit.operationMode || "Custom";
   const isConnected =
     isDemoMode || Boolean(unit.controlCapabilities?.configured);
-  const availableModes = isDemoMode
-    ? ["Balanced", "Power Priority", "AWG Water Priority"]
-    : unit.controlCapabilities?.operationModes || [];
+  const outputs = unitOutputs(unit);
   const availableCameras = (unit.cameras || []).filter((camera) =>
     /^https:\/\//.test(camera.url),
   );
@@ -86,10 +81,6 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
   const actionHistory = events
     .filter((event) => event.unitId === unit.id && event.type === "control")
     .slice(0, 20);
-  useEffect(() => {
-    setPowerSetpoint(unit.powerSetpoint ?? 0);
-    setAwgSetpoint(unit.waterSetpoint ?? 0);
-  }, [unit.powerSetpoint, unit.waterSetpoint]);
   useEffect(() => {
     const changed = () => setIsFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener("fullscreenchange", changed);
@@ -126,9 +117,6 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
     );
   const handleAutoSwitchToggle = (checked) =>
     submit({ autoSwitchEnabled: checked }, "cool-tones.mp3");
-  const handleModeSelect = (mode) => submit({ operationMode: mode });
-  const handlePowerSetpointChange = (value) => setPowerSetpoint(value),
-    handleAwgSetpointChange = (value) => setAwgSetpoint(value);
   const handleCameraChange = (id) => {
     setSelectedCamera(id);
     setFeedLoaded(false);
@@ -317,14 +305,14 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
             </CardContent>
           </Card>
 
-          {/* Water Production Control */}
-          {unit.watergeneration && (
+          {/* AWG Water Production Control */}
+          {outputs.water.capable && (
             <Card className="bg-white dark:bg-gray-900">
               <CardHeader>
                 <div className="flex items-center space-x-3">
                   <Droplets className="h-5 w-5 text-blue-500" />
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    Water Production Control
+                    AWG Water Production Control
                   </h3>
                 </div>
               </CardHeader>
@@ -332,10 +320,10 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Water Production
+                      AWG Water Production
                     </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Enable or disable water production
+                      Enable or disable AWG Water production
                     </p>
                   </div>
                   {hasControlPermission ? (
@@ -351,7 +339,7 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                               pending ||
                               !hasControlPermission
                             }
-                            aria-label="Water Production"
+                            aria-label="AWG Water Production"
                           />
                         </div>
                       </AlertDialogTrigger>
@@ -362,8 +350,8 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                           </AlertDialogTitle>
                           <AlertDialogDescription>
                             This action will{" "}
-                            {waterProductionOn ? "disable" : "enable"} water
-                            production. This could affect water levels.
+                            {waterProductionOn ? "disable" : "enable"} AWG Water
+                            production. This could affect AWG Water levels.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -382,7 +370,7 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                     <Switch
                       checked={waterProductionOn}
                       disabled={true}
-                      aria-label="Water Production"
+                      aria-label="AWG Water Production"
                     />
                   )}
                 </div>
@@ -397,7 +385,7 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Current water level:{" "}
+                    Current AWG Water level:{" "}
                     {(unit?.awgWaterLevel ?? unit?.water_level) != null
                       ? `${unit.awgWaterLevel ?? unit.water_level} L`
                       : "N/A"}
@@ -408,163 +396,17 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
           )}
         </div>
 
-        {/* Thermal & AWG Production Setpoints */}
-        <Card className="bg-white dark:bg-gray-900 mt-6">
-          <CardHeader>
-            <div className="flex items-center space-x-3">
-              <Sliders className="h-5 w-5 text-indigo-500" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                Thermal &amp; AWG Production Setpoints
-              </h3>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Mode Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Operation Mode
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  disabled={
-                    pending ||
-                    !hasControlPermission ||
-                    !machineOn ||
-                    !availableModes.includes("Balanced")
-                  }
-                  onClick={() => handleModeSelect("Balanced")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
-                    operationMode === "Balanced"
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  Balanced
-                </button>
-                <button
-                  type="button"
-                  disabled={
-                    pending ||
-                    !hasControlPermission ||
-                    !machineOn ||
-                    !availableModes.includes("Power Priority")
-                  }
-                  onClick={() => handleModeSelect("Power Priority")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
-                    operationMode === "Power Priority"
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  Power Priority
-                </button>
-                <button
-                  type="button"
-                  disabled={
-                    pending ||
-                    !hasControlPermission ||
-                    !machineOn ||
-                    !availableModes.includes("AWG Water Priority")
-                  }
-                  onClick={() => handleModeSelect("AWG Water Priority")}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
-                    operationMode === "AWG Water Priority"
-                      ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  AWG Water Priority
-                </button>
-              </div>
-            </div>
-
-            {/* Power Production Setpoint Slider */}
-            <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex justify-between items-center">
-                <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  Power Production Setpoint
-                </label>
-                <span className="text-base font-bold text-blue-600 dark:text-blue-400">
-                  {powerSetpoint} kW
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max={
-                  unit.controlCapabilities?.limits?.powerSetpoint ??
-                  (isDemoMode ? 100 : 0)
-                }
-                step="0.1"
-                value={powerSetpoint}
-                onChange={(e) =>
-                  handlePowerSetpointChange(Number(e.target.value))
-                }
-                disabled={!isConnected || pending || !hasControlPermission}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
-              />
-              <button
-                type="button"
-                disabled={
-                  pending || !hasControlPermission || !isConnected || !machineOn
-                }
-                onClick={() => submit({ powerSetpoint: Number(powerSetpoint) })}
-              >
-                Apply power setpoint
-              </button>
-            </div>
-
-            {/* AWG Water Production Setpoint Slider */}
-            {unit.watergeneration && (
-              <div className="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex justify-between items-center">
-                  <label className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    AWG Water Production Setpoint
-                  </label>
-                  <span className="text-base font-bold text-blue-600 dark:text-blue-400">
-                    {awgSetpoint} L/h
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max={
-                    unit.controlCapabilities?.limits?.waterSetpoint ??
-                    (isDemoMode ? 10 : 0)
-                  }
-                  step="0.1"
-                  value={awgSetpoint}
-                  onChange={(e) =>
-                    handleAwgSetpointChange(Number(e.target.value))
-                  }
-                  disabled={
-                    !isConnected ||
-                    !machineOn ||
-                    pending ||
-                    !hasControlPermission
-                  }
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-blue-600"
-                />
-                <button
-                  type="button"
-                  disabled={
-                    pending ||
-                    !hasControlPermission ||
-                    !isConnected ||
-                    !machineOn
-                  }
-                  onClick={() => submit({ waterSetpoint: Number(awgSetpoint) })}
-                >
-                  Apply water setpoint
-                </button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <OperatingBalanceControls
+          unit={unit}
+          isDemoMode={isDemoMode}
+          disabled={
+            !isConnected || !machineOn || pending || !hasControlPermission
+          }
+          onApply={(changes) => controlUnit(unit.id, changes)}
+        />
 
         {/* Automatic Control Settings */}
-        {unit.watergeneration && (
+        {outputs.water.capable && (
           <Card className="bg-white dark:bg-gray-900 mt-6">
             <CardHeader>
               <div className="flex items-center space-x-3">
@@ -578,10 +420,10 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                    Automatic Water Control
+                    Automatic AWG Water Control
                   </h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Enable the configured device water-level control policy
+                    Enable the configured device AWG Water level control policy
                   </p>
                 </div>
                 {hasControlPermission ? (
@@ -609,7 +451,7 @@ const RemoteUnit = ({ unit, navigate, className = "" }) => {
                         <AlertDialogDescription>
                           This action will{" "}
                           {autoSwitchEnabled ? "disable" : "enable"} automatic
-                          control. This could affect water levels if not
+                          control. This could affect AWG Water levels if not
                           monitored.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
