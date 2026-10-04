@@ -10,9 +10,9 @@ import {
   Route,
   BrowserRouter as Router,
   Routes,
-  useLocation,
 } from "react-router-dom";
 
+import ScrollToTop from "./components/common/ScrollToTop";
 import Spinner from "./components/common/Spinner";
 import ForgotPassword from "./components/ForgotPassword";
 import LoginScreen from "./components/LoginScreen";
@@ -20,27 +20,14 @@ import PasswordResetRequest from "./components/PasswordResetRequest";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ThemeToggle from "./components/ThemeToggle";
 import routes from "./config/routes";
+import { AnalyticsProvider } from "./context/AnalyticsContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SettingsProvider, useSettings } from "./context/SettingsContext";
 import { SidebarProvider } from "./context/SidebarContext";
 import { TenantProvider } from "./context/TenantContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { AnalyticsProvider } from "./context/AnalyticsContext";
 import { UnitProvider } from "./context/UnitContext";
 import playSound from "./utils/audioPlayer";
-
-// Component to handle scroll to top on route change
-const ScrollToTop = () => {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    if (pathname) {
-      window.scrollTo(0, 0);
-    }
-  }, [pathname]);
-
-  return null;
-};
 
 // FIXED: Hoisted outside AppContent to prevent recreating lazy components on every render
 const UnitDetailsPage = React.lazy(() => import("./components/UnitDetails"));
