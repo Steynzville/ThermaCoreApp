@@ -76,10 +76,10 @@ Configure actual unit ownership, sensor/channel identifiers, units and threshold
 `UNIT_CONTROL_GATEWAYS` is server-side JSON keyed by unit ID:
 
 ```json
-{"UNIT-ID":{"url":"https://gateway.example/commands","token":"SECRET_FROM_SECRET_STORE","limits":{"powerSetpoint":25,"waterSetpoint":10},"operation_modes":["Balanced"],"water_trigger_percent":25}}
+{"UNIT-ID":{"url":"https://gateway.example/commands","token":"SECRET_FROM_SECRET_STORE","limits":{"powerSetpoint":25,"waterSetpoint":10},"operation_modes":["Balanced"],"balance_fields":["powerHeatBalance","powerWaterBalance"],"water_trigger_percent":25}}
 ```
 
-Setpoints are kW and L/h, not percentages. Use installation-specific limits/mode names. Require the bearer token at the gateway; never publish it in frontend configuration. The gateway receives `{command_id, unit_id, controls}` and `Idempotency-Key`, and must return `{command_id, acknowledged: true, controls}` with exact matching values. It must enforce physical interlocks independently. Timeouts are not automatically retried; verify physical state first.
+The operating-balance UI uses independent `powerHeatBalance`, `powerWaterBalance` and `powerChillBalance` fields: 0 selects Max Power, 50 selects Balanced, and 100 selects the opposite output. Enable only fields the physical gateway implements via `balance_fields`; unit output capabilities also gate commands. Acknowledged balances persist in existing command history without a database migration. Legacy `powerSetpoint` (kW), `waterSetpoint` (L/h) and operation modes remain supported for compatibility but are not used by the balance UI. Production quantities cannot be converted reliably to operating biases: existing live units show Not reported until the gateway provides an acknowledged balance. Use installation-specific limits/mode names. Require the bearer token at the gateway; never publish it in frontend configuration. The gateway receives `{command_id, unit_id, controls}` and `Idempotency-Key`, and must return `{command_id, acknowledged: true, controls}` with exact matching values. It must enforce physical interlocks independently. Timeouts are not automatically retried; verify physical state first.
 
 `UNIT_CAMERA_FEEDS` is JSON such as `{"UNIT-ID":[{"id":"external","name":"External camera","url":"https://camera.example/stream","resolution":"1080p","fps":25}]}`. Only HTTPS URLs without embedded credentials are exposed. Configure stream authorization, compatible playback, CORS and expiring URLs as needed; the application does not provide a camera proxy/transcoder.
 

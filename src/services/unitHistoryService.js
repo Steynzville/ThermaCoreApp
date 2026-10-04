@@ -14,7 +14,7 @@ export const historyMetrics = [
   ["Flow Rate Out - Hot History", "flowRateOutHot", "L/min", "#e11d48"],
   ["Useful Heating History", "usefulHeat", "kWth", "#ef4444"],
   ["Useful Chilling History", "usefulChill", "kWth", "#06b6d4"],
-  ["Water Production History", "waterRate", "L/h", "#3b82f6"],
+  ["AWG Water Production History", "waterRate", "L/h", "#3b82f6"],
 ];
 export async function getUnitHistory(unit, range) {
   const start = new Date(`${range.from}T00:00:00Z`),
