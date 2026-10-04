@@ -1,7 +1,7 @@
 import { Navigate } from "react-router-dom";
-
 import { useAuth } from "../context/AuthContext";
 import { getFrontendRole } from "../utils/permissions";
+import { resetPageScroll } from "./common/ScrollToTop";
 import EnhancedSideNavigation from "./SideNavigation";
 import { Spinner } from "./ui/spinner";
 
@@ -61,7 +61,11 @@ const ProtectedRoute = ({
   return (
     <div className="flex h-screen overflow-hidden">
       <EnhancedSideNavigation userRole={userRole} />
-      <main className="flex-1 overflow-auto min-w-0">
+      <main
+        ref={resetPageScroll}
+        data-page-scroll
+        className="flex-1 overflow-auto min-w-0"
+      >
         <ComponentToRender userRole={userRole} {...props} />
       </main>
     </div>
