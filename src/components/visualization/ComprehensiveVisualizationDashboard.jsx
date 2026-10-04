@@ -9,9 +9,9 @@
  */
 
 import { useEffect, useState } from "react";
+import { isDemoMode } from "../../config/runtime";
 import { useScada } from "../../context/ScadaContext";
 import { historyMetrics } from "../../services/unitHistoryService";
-import { isDemoMode } from "../../config/runtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import IndustrialGauge from "./IndustrialGauge";
 import MultiTimeframeTrendChart from "./MultiTimeframeTrendChart";
@@ -92,7 +92,7 @@ const ComprehensiveVisualizationDashboard = ({
     ["Electrical Power", "currentPower", "kW", 100],
     ["Useful Heating", "usefulHeat", "kWth", 100],
     ["Useful Chilling", "usefulChill", "kWth", 100],
-    ["Potable Water Production", "waterRate", "L/h", 100],
+    ["Potable AWG Water Production", "waterRate", "L/h", 100],
   ];
   const renderGauge = ([title, field, measurementUnit, max]) => (
     <IndustrialGauge

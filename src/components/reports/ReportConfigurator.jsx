@@ -14,7 +14,7 @@ import {
   Users,
   Wrench,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useSettings } from "../../context/SettingsContext";
 import { cn } from "../../lib/utils";
@@ -50,7 +50,7 @@ const SECTION_CONFIG = {
     color: "text-blue-600",
   },
   waterProduction: {
-    label: "Water Production",
+    label: "AWG Water Production",
     icon: Activity,
     color: "text-cyan-600",
   },
