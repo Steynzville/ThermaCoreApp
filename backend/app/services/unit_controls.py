@@ -32,7 +32,13 @@ def acknowledged_controls(unit_id):
 
 
 def execute_control(unit, controls, user_id):
+    balance_outputs = {
+        "powerHeatBalance": unit.supports_heat,
+        "powerChillBalance": unit.supports_chill,
+        "powerWaterBalance": unit.supports_water,
+    }
     allowed = {
+        *balance_outputs,
         "operationMode",
         "machinePower",
         "waterProductionOn",
@@ -98,6 +104,12 @@ def execute_control(unit, controls, user_id):
                 raise ControlError(
                     f"{key} exceeds the configured device limit or no limit is configured.",
                 )
+    for key, capable in balance_outputs.items():
+        if key in controls:
+            if not capable or key not in gateway.get("balance_fields", []):
+                raise ControlError("Operating balance is not configured for this output.")
+            if controls[key] > 100:
+                raise ControlError("Operating balance must be between 0 and 100.")
     command_id = str(uuid.uuid4())
     headers = {"Content-Type": "application/json", "Idempotency-Key": command_id}
     if gateway.get("token"):
@@ -147,6 +159,7 @@ def public_control_configuration(unit_id):
         gateway = gateways.get(unit_id, {})
         return {
             "configured": urlparse(gateway.get("url", "")).scheme == "https",
+            "balanceFields": gateway.get("balance_fields", []),
             "limits": gateway.get("limits", {}),
             "operationModes": gateway.get("operation_modes", []),
             "waterTriggerPercent": gateway.get("water_trigger_percent"),

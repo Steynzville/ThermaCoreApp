@@ -1,5 +1,5 @@
-import { units as fixtures } from "./mockUnits";
 import { normalizeUnit } from "../utils/portfolio";
+import { units as fixtures } from "./mockUnits";
 
 // Fictional ownership is explicit and separate from database tenant identifiers.
 // Live API ownership always takes precedence when the same unit exists there.
@@ -15,6 +15,9 @@ export const demoTenants = fixtures.map((unit) => ({
 export const demoUnits = fixtures.map((unit, i) =>
   normalizeUnit({
     ...unit,
+    powerHeatBalance: 50,
+    powerWaterBalance: 50,
+    powerChillBalance: 50,
     batteryVoltage:
       unit.hasAlert && !unit.hasAlarm && unit.status === "online"
         ? 21.8

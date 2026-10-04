@@ -11,7 +11,7 @@ export default function OutputIndicators({ unit }) {
           power: "Electrical power",
           heat: "Useful heating",
           chill: "Useful chilling",
-          water: "Potable AWG water",
+          water: "AWG Water",
         }[key];
         const state = !output.capable
           ? "Not fitted"
@@ -52,7 +52,7 @@ export default function OutputIndicators({ unit }) {
                   power: "Power",
                   heat: "Heat",
                   chill: "Chill",
-                  water: "Water",
+                  water: "AWG Water",
                 }[key]
               }
             </span>

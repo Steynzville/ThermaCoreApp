@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { useUnits } from "../context/UnitContext";
 import { useAnalytics } from "../context/AnalyticsContext";
+import { useUnits } from "../context/UnitContext";
 import PortfolioAssumptions from "./PortfolioAssumptions";
 import { Card, CardContent } from "./ui/card";
+
 const number = (value, decimals = 1) =>
   value == null
     ? "Not available"
@@ -109,7 +110,7 @@ export default function PerformanceDashboard({
             Object.entries(labels).map(([key, label]) => (
               <Metric
                 key={key}
-                title={`Water generated (${label})`}
+                title={`AWG Water generated (${label})`}
                 value={number(analytics.periods[key].waterLitres)}
                 unit="L"
               />
